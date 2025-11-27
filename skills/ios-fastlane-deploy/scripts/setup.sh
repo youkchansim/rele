@@ -2,18 +2,12 @@
 # iOS Fastlane 배포 환경 초기 설정 스크립트
 #
 # 기능:
-#   1. Fastlane 설치 확인
-#   2. 템플릿 파일 복사
+#   1. 공용 설정이 있으면 자동으로 진행
+#   2. 없으면 에러 + 설정 가이드 표시
 #   3. 기존 App Store 앱이면 메타데이터 다운로드
-#   4. 설정 파일 자동 구성
 #
-# 사용법: ./setup.sh /path/to/project
-#
-# 필요한 정보 (대화식으로 입력):
-#   - Bundle ID
-#   - Apple ID (이메일)
-#   - Team ID
-#   - API Key 정보 (선택)
+# 사용법: ./setup.sh /path/to/project [--auto]
+#   --auto: 대화형 입력 없이 자동 진행
 
 set -e
 
@@ -33,33 +27,99 @@ ASSETS_DIR="$SKILL_DIR/assets"
 GLOBAL_CONFIG_DIR="$HOME/.appstore_keys"
 GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config.json"
 
-# 프로젝트 경로
+# 인자 파싱
 PROJECT_ROOT="${1:-.}"
+AUTO_MODE=false
+if [[ "$2" == "--auto" ]] || [[ "$1" == "--auto" ]]; then
+    AUTO_MODE=true
+    if [[ "$1" == "--auto" ]]; then
+        PROJECT_ROOT="."
+    fi
+fi
+
 cd "$PROJECT_ROOT"
 PROJECT_ROOT="$(pwd)"
 
-# 공용 설정 로드 함수
-load_global_config() {
-    if [ -f "$GLOBAL_CONFIG_FILE" ]; then
-        # jq가 있으면 사용, 없으면 grep으로 파싱
-        if command -v jq &> /dev/null; then
-            GLOBAL_APPLE_ID=$(jq -r '.apple_id // empty' "$GLOBAL_CONFIG_FILE")
-            GLOBAL_TEAM_ID=$(jq -r '.team_id // empty' "$GLOBAL_CONFIG_FILE")
-            GLOBAL_KEY_ID=$(jq -r '.default.key_id // empty' "$GLOBAL_CONFIG_FILE")
-            GLOBAL_ISSUER_ID=$(jq -r '.default.issuer_id // empty' "$GLOBAL_CONFIG_FILE")
-            GLOBAL_KEY_FILE=$(jq -r '.default.key_file // empty' "$GLOBAL_CONFIG_FILE")
-        else
-            GLOBAL_APPLE_ID=$(grep -o '"apple_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
-            GLOBAL_TEAM_ID=$(grep -o '"team_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
-            GLOBAL_KEY_ID=$(grep -o '"key_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
-            GLOBAL_ISSUER_ID=$(grep -o '"issuer_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
-            GLOBAL_KEY_FILE=$(grep -o '"key_file"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
-        fi
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 공용 설정 검증 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+check_global_config() {
+    if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
+        return 1
     fi
+
+    # jq가 있으면 사용, 없으면 grep으로 파싱
+    if command -v jq &> /dev/null; then
+        GLOBAL_APPLE_ID=$(jq -r '.apple_id // empty' "$GLOBAL_CONFIG_FILE")
+        GLOBAL_TEAM_ID=$(jq -r '.team_id // empty' "$GLOBAL_CONFIG_FILE")
+        GLOBAL_KEY_ID=$(jq -r '.default.key_id // empty' "$GLOBAL_CONFIG_FILE")
+        GLOBAL_ISSUER_ID=$(jq -r '.default.issuer_id // empty' "$GLOBAL_CONFIG_FILE")
+        GLOBAL_KEY_FILE=$(jq -r '.default.key_file // empty' "$GLOBAL_CONFIG_FILE")
+    else
+        GLOBAL_APPLE_ID=$(grep -o '"apple_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" 2>/dev/null | cut -d'"' -f4)
+        GLOBAL_TEAM_ID=$(grep -o '"team_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" 2>/dev/null | cut -d'"' -f4)
+        GLOBAL_KEY_ID=$(grep -o '"key_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" 2>/dev/null | cut -d'"' -f4)
+        GLOBAL_ISSUER_ID=$(grep -o '"issuer_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" 2>/dev/null | cut -d'"' -f4)
+        GLOBAL_KEY_FILE=$(grep -o '"key_file"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" 2>/dev/null | cut -d'"' -f4)
+    fi
+
+    # API 키 파일 존재 확인
+    if [ -z "$GLOBAL_KEY_FILE" ] || [ ! -f "$GLOBAL_CONFIG_DIR/$GLOBAL_KEY_FILE" ]; then
+        return 1
+    fi
+
+    # 필수 값 확인
+    if [ -z "$GLOBAL_KEY_ID" ] || [ -z "$GLOBAL_ISSUER_ID" ] || [ -z "$GLOBAL_TEAM_ID" ]; then
+        return 1
+    fi
+
+    return 0
 }
 
-# 공용 설정 로드
-load_global_config
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 설정 가이드 표시
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+show_setup_guide() {
+    echo ""
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${RED}❌ App Store Connect API 키가 설정되지 않았습니다!${NC}"
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${YELLOW}📁 설정 방법:${NC}"
+    echo ""
+    echo "1. 디렉토리 생성:"
+    echo -e "   ${GREEN}mkdir -p ~/.appstore_keys${NC}"
+    echo ""
+    echo "2. API 키 파일 복사 (.p8 파일):"
+    echo -e "   ${GREEN}cp /path/to/AuthKey_XXXXXX.p8 ~/.appstore_keys/${NC}"
+    echo ""
+    echo "3. config.json 생성:"
+    echo -e "   ${GREEN}cat > ~/.appstore_keys/config.json << 'EOF'"
+    echo '   {'
+    echo '     "default": {'
+    echo '       "key_id": "YOUR_KEY_ID",'
+    echo '       "issuer_id": "YOUR_ISSUER_ID",'
+    echo '       "key_file": "AuthKey_XXXXXX.p8"'
+    echo '     },'
+    echo '     "apple_id": "your-email@example.com",'
+    echo '     "team_id": "XXXXXXXXXX"'
+    echo '   }'
+    echo -e "   EOF${NC}"
+    echo ""
+    echo -e "${YELLOW}📌 API 키 발급 방법:${NC}"
+    echo "   1. https://appstoreconnect.apple.com 접속"
+    echo "   2. Users and Access → Keys → App Store Connect API"
+    echo "   3. + 버튼으로 새 키 생성 (Admin 권한)"
+    echo "   4. Key ID, Issuer ID 복사"
+    echo "   5. .p8 파일 다운로드"
+    echo ""
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exit 1
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 메인 로직 시작
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}🚀 iOS Fastlane 배포 환경 설정${NC}"
@@ -67,24 +127,30 @@ echo -e "${BLUE}   프로젝트: $PROJECT_ROOT${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 1. Fastlane 설치 확인
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo -e "${YELLOW}1️⃣  Fastlane 설치 확인...${NC}"
+# 1. 공용 설정 확인
+echo -e "${YELLOW}1️⃣  공용 설정 확인...${NC}"
+if ! check_global_config; then
+    show_setup_guide
+fi
+echo -e "   ${GREEN}✅ 공용 설정 발견${NC}"
+echo -e "      Apple ID: $GLOBAL_APPLE_ID"
+echo -e "      Team ID: $GLOBAL_TEAM_ID"
+echo -e "      Key ID: $GLOBAL_KEY_ID"
+echo ""
+
+# 2. Fastlane 설치 확인
+echo -e "${YELLOW}2️⃣  Fastlane 설치 확인...${NC}"
 if command -v fastlane &> /dev/null; then
     echo -e "   ${GREEN}✅ Fastlane 설치됨${NC}"
 else
-    echo -e "   ${RED}❌ Fastlane 미설치${NC}"
-    echo -e "   ${YELLOW}설치 중...${NC}"
+    echo -e "   ${YELLOW}⏳ Fastlane 설치 중...${NC}"
     gem install fastlane
     echo -e "   ${GREEN}✅ Fastlane 설치 완료${NC}"
 fi
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 2. Xcode 프로젝트 찾기
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo -e "${YELLOW}2️⃣  Xcode 프로젝트 탐색...${NC}"
+# 3. Xcode 프로젝트 찾기
+echo -e "${YELLOW}3️⃣  Xcode 프로젝트 탐색...${NC}"
 XCODEPROJ=$(find . -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
 if [ -z "$XCODEPROJ" ]; then
     echo -e "   ${RED}❌ Xcode 프로젝트를 찾을 수 없습니다${NC}"
@@ -94,107 +160,17 @@ PROJECT_NAME=$(basename "$XCODEPROJ" .xcodeproj)
 echo -e "   ${GREEN}✅ 프로젝트 발견: $PROJECT_NAME${NC}"
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 3. 프로젝트 정보 입력
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo -e "${YELLOW}3️⃣  프로젝트 정보 입력${NC}"
-
-# Bundle ID 자동 감지 시도
-DETECTED_BUNDLE_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "PRODUCT_BUNDLE_IDENTIFIER" | head -1 | awk '{print $3}')
-
-if [ -n "$DETECTED_BUNDLE_ID" ]; then
-    echo -e "   감지된 Bundle ID: ${GREEN}$DETECTED_BUNDLE_ID${NC}"
-    read -p "   사용하시겠습니까? (Y/n): " USE_DETECTED
-    if [[ "$USE_DETECTED" =~ ^[Nn]$ ]]; then
-        read -p "   Bundle ID 입력: " BUNDLE_ID
-    else
-        BUNDLE_ID="$DETECTED_BUNDLE_ID"
-    fi
-else
-    read -p "   Bundle ID (예: com.company.app): " BUNDLE_ID
+# 4. Bundle ID 자동 감지
+echo -e "${YELLOW}4️⃣  Bundle ID 감지...${NC}"
+BUNDLE_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "PRODUCT_BUNDLE_IDENTIFIER" | head -1 | awk '{print $3}')
+if [ -z "$BUNDLE_ID" ]; then
+    echo -e "   ${RED}❌ Bundle ID를 감지할 수 없습니다${NC}"
+    exit 1
 fi
-
-# Apple ID (공용 설정 확인)
-if [ -n "$GLOBAL_APPLE_ID" ]; then
-    echo -e "   공용 설정 Apple ID: ${GREEN}$GLOBAL_APPLE_ID${NC}"
-    read -p "   사용하시겠습니까? (Y/n): " USE_GLOBAL_APPLE_ID
-    if [[ "$USE_GLOBAL_APPLE_ID" =~ ^[Nn]$ ]]; then
-        read -p "   Apple ID (이메일): " APPLE_ID
-    else
-        APPLE_ID="$GLOBAL_APPLE_ID"
-    fi
-else
-    read -p "   Apple ID (이메일): " APPLE_ID
-fi
-
-# Team ID (공용 설정 → Xcode 감지 → 수동 입력)
-if [ -n "$GLOBAL_TEAM_ID" ]; then
-    echo -e "   공용 설정 Team ID: ${GREEN}$GLOBAL_TEAM_ID${NC}"
-    read -p "   사용하시겠습니까? (Y/n): " USE_GLOBAL_TEAM
-    if [[ ! "$USE_GLOBAL_TEAM" =~ ^[Nn]$ ]]; then
-        TEAM_ID="$GLOBAL_TEAM_ID"
-    fi
-fi
-
-if [ -z "$TEAM_ID" ]; then
-    DETECTED_TEAM_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "DEVELOPMENT_TEAM" | head -1 | awk '{print $3}')
-    if [ -n "$DETECTED_TEAM_ID" ] && [ "$DETECTED_TEAM_ID" != "" ]; then
-        echo -e "   감지된 Team ID: ${GREEN}$DETECTED_TEAM_ID${NC}"
-        read -p "   사용하시겠습니까? (Y/n): " USE_DETECTED_TEAM
-        if [[ "$USE_DETECTED_TEAM" =~ ^[Nn]$ ]]; then
-            read -p "   Team ID: " TEAM_ID
-        else
-            TEAM_ID="$DETECTED_TEAM_ID"
-        fi
-    else
-        read -p "   Team ID: " TEAM_ID
-    fi
-fi
-
+echo -e "   ${GREEN}✅ Bundle ID: $BUNDLE_ID${NC}"
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 4. API 키 설정
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo -e "${YELLOW}4️⃣  App Store Connect API 키 설정${NC}"
-
-# 공용 API 키 확인
-GLOBAL_KEY_PATH="$GLOBAL_CONFIG_DIR/$GLOBAL_KEY_FILE"
-if [ -n "$GLOBAL_KEY_ID" ] && [ -f "$GLOBAL_KEY_PATH" ]; then
-    echo -e "   ${GREEN}✅ 공용 API 키 발견${NC}"
-    echo -e "      Key ID: $GLOBAL_KEY_ID"
-    echo -e "      파일: $GLOBAL_KEY_PATH"
-    read -p "   공용 키를 사용하시겠습니까? (Y/n): " USE_GLOBAL_KEY
-
-    if [[ ! "$USE_GLOBAL_KEY" =~ ^[Nn]$ ]]; then
-        API_KEY_ID="$GLOBAL_KEY_ID"
-        API_ISSUER_ID="$GLOBAL_ISSUER_ID"
-        USE_GLOBAL_API_KEY=true
-        echo -e "   ${GREEN}✅ 공용 API 키 사용${NC}"
-    fi
-fi
-
-# 공용 키를 사용하지 않는 경우
-if [ -z "$USE_GLOBAL_API_KEY" ]; then
-    read -p "   프로젝트별 API 키를 설정하시겠습니까? (y/N): " SETUP_API_KEY
-
-    if [[ "$SETUP_API_KEY" =~ ^[Yy]$ ]]; then
-        read -p "   Key ID: " API_KEY_ID
-        read -p "   Issuer ID: " API_ISSUER_ID
-        read -p "   .p8 파일 경로: " API_KEY_PATH
-
-        if [ -n "$API_KEY_PATH" ] && [ -f "$API_KEY_PATH" ]; then
-            mkdir -p fastlane
-            cp "$API_KEY_PATH" "fastlane/AuthKey_${API_KEY_ID}.p8"
-            echo -e "   ${GREEN}✅ API 키 파일 복사 완료${NC}"
-        fi
-    fi
-fi
-echo ""
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 5. fastlane 디렉토리 생성 및 템플릿 복사
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 5. Fastlane 파일 생성
 echo -e "${YELLOW}5️⃣  Fastlane 설정 파일 생성...${NC}"
 mkdir -p fastlane
 
@@ -204,96 +180,54 @@ cat > fastlane/Appfile << EOF
 # 생성일: $(date '+%Y-%m-%d %H:%M:%S')
 
 app_identifier("$BUNDLE_ID")
-apple_id("$APPLE_ID")
-team_id("$TEAM_ID")
+apple_id("$GLOBAL_APPLE_ID")
+team_id("$GLOBAL_TEAM_ID")
 EOF
 echo -e "   ${GREEN}✅ Appfile 생성${NC}"
 
 # Fastfile 복사 및 수정
 cp "$ASSETS_DIR/Fastfile.template" fastlane/Fastfile
-
-# Fastfile 설정값 교체
 sed -i '' "s/YourApp.xcodeproj/${PROJECT_NAME}.xcodeproj/g" fastlane/Fastfile
 sed -i '' "s/SCHEME = \"YourApp\"/SCHEME = \"${PROJECT_NAME}\"/g" fastlane/Fastfile
 sed -i '' "s/com.yourcompany.app/${BUNDLE_ID}/g" fastlane/Fastfile
-
-if [ -n "$API_KEY_ID" ]; then
-    sed -i '' "s/YOUR_KEY_ID/${API_KEY_ID}/g" fastlane/Fastfile
-    sed -i '' "s/YOUR_ISSUER_ID/${API_ISSUER_ID}/g" fastlane/Fastfile
-    sed -i '' "s/AuthKey_XXXXX.p8/AuthKey_${API_KEY_ID}.p8/g" fastlane/Fastfile
-fi
 echo -e "   ${GREEN}✅ Fastfile 생성${NC}"
 
 # ExportOptions.plist 복사 및 수정
 cp "$ASSETS_DIR/ExportOptions.plist" fastlane/ExportOptions.plist
-sed -i '' "s/XXXXXXXXXX/${TEAM_ID}/g" fastlane/ExportOptions.plist
+sed -i '' "s/XXXXXXXXXX/${GLOBAL_TEAM_ID}/g" fastlane/ExportOptions.plist
 echo -e "   ${GREEN}✅ ExportOptions.plist 생성${NC}"
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 6. App Store 메타데이터 다운로드 (기존 앱인 경우)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 6. App Store 메타데이터 다운로드 (자동 모드가 아닐 때만 질문)
 echo -e "${YELLOW}6️⃣  App Store 메타데이터 확인...${NC}"
-read -p "   이미 App Store에 출시된 앱입니까? (y/N): " IS_PUBLISHED
+if [ "$AUTO_MODE" = true ]; then
+    IS_PUBLISHED="n"
+else
+    read -p "   이미 App Store에 출시된 앱입니까? (y/N): " IS_PUBLISHED
+fi
 
 if [[ "$IS_PUBLISHED" =~ ^[Yy]$ ]]; then
-    echo -e "   ${BLUE}📥 App Store Connect에서 메타데이터 다운로드 중...${NC}"
+    echo -e "   ${BLUE}📥 메타데이터 다운로드 중...${NC}"
 
-    # deliver init으로 메타데이터 구조 생성 및 다운로드
-    if [ -n "$API_KEY_ID" ]; then
-        fastlane deliver download_metadata \
-            --app_identifier "$BUNDLE_ID" \
-            --api_key_path "fastlane/AuthKey_${API_KEY_ID}.p8" \
-            --api_key_id "$API_KEY_ID" \
-            --api_issuer_id "$API_ISSUER_ID" \
-            2>/dev/null || true
+    fastlane deliver download_metadata \
+        --app_identifier "$BUNDLE_ID" \
+        --api_key_path "$GLOBAL_CONFIG_DIR/$GLOBAL_KEY_FILE" \
+        2>/dev/null || true
 
-        fastlane deliver download_screenshots \
-            --app_identifier "$BUNDLE_ID" \
-            --api_key_path "fastlane/AuthKey_${API_KEY_ID}.p8" \
-            --api_key_id "$API_KEY_ID" \
-            --api_issuer_id "$API_ISSUER_ID" \
-            2>/dev/null || true
-    else
-        fastlane deliver download_metadata \
-            --app_identifier "$BUNDLE_ID" \
-            --username "$APPLE_ID" \
-            2>/dev/null || true
-
-        fastlane deliver download_screenshots \
-            --app_identifier "$BUNDLE_ID" \
-            --username "$APPLE_ID" \
-            2>/dev/null || true
-    fi
+    fastlane deliver download_screenshots \
+        --app_identifier "$BUNDLE_ID" \
+        --api_key_path "$GLOBAL_CONFIG_DIR/$GLOBAL_KEY_FILE" \
+        2>/dev/null || true
 
     if [ -d "fastlane/metadata" ]; then
         echo -e "   ${GREEN}✅ 메타데이터 다운로드 완료${NC}"
-        echo -e "   ${GREEN}   - fastlane/metadata/ (앱 설명, 키워드 등)${NC}"
-    fi
-
-    if [ -d "fastlane/screenshots" ]; then
-        echo -e "   ${GREEN}✅ 스크린샷 다운로드 완료${NC}"
-        echo -e "   ${GREEN}   - fastlane/screenshots/ (앱 스크린샷)${NC}"
     fi
 else
-    echo -e "   ${YELLOW}⏭️  메타데이터 다운로드 건너뜀 (신규 앱)${NC}"
+    echo -e "   ${YELLOW}⏭️  메타데이터 다운로드 건너뜀${NC}"
 fi
 echo ""
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 7. 설정 검증
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo -e "${YELLOW}7️⃣  설정 검증 중...${NC}"
-if fastlane lanes &> /dev/null; then
-    echo -e "   ${GREEN}✅ Fastlane 설정 유효${NC}"
-else
-    echo -e "   ${YELLOW}⚠️  Fastlane 설정 확인 필요${NC}"
-fi
-echo ""
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 완료
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 7. 완료
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✅ 설정 완료!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -302,16 +236,7 @@ echo -e "생성된 파일:"
 echo -e "   📁 fastlane/"
 echo -e "      ├── Appfile"
 echo -e "      ├── Fastfile"
-echo -e "      ├── ExportOptions.plist"
-if [ -n "$API_KEY_ID" ]; then
-echo -e "      ├── AuthKey_${API_KEY_ID}.p8"
-fi
-if [ -d "fastlane/metadata" ]; then
-echo -e "      ├── metadata/"
-fi
-if [ -d "fastlane/screenshots" ]; then
-echo -e "      └── screenshots/"
-fi
+echo -e "      └── ExportOptions.plist"
 echo ""
 echo -e "사용 가능한 명령어:"
 echo -e "   ${BLUE}fastlane beta${NC}       - TestFlight 배포"

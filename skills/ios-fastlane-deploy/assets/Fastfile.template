@@ -35,31 +35,86 @@ platform :ios do
   # 공용 키 위치: ~/.appstore_keys/
   # 프로젝트별 키가 필요하면 fastlane/AuthKey_*.p8 사용
 
-  # API 키 경로 결정 (프로젝트 로컬 → 공용 위치)
-  def find_api_key_path
-    local_key = Dir.glob("fastlane/AuthKey_*.p8").first
-    global_key = Dir.glob(File.expand_path("~/.appstore_keys/AuthKey_*.p8")).first
-    local_key || global_key
-  end
+  GLOBAL_CONFIG_DIR = File.expand_path("~/.appstore_keys")
+  GLOBAL_CONFIG_PATH = "#{GLOBAL_CONFIG_DIR}/config.json"
 
   # 공용 설정 로드
   def load_global_config
-    config_path = File.expand_path("~/.appstore_keys/config.json")
-    if File.exist?(config_path)
+    if File.exist?(GLOBAL_CONFIG_PATH)
       require 'json'
-      JSON.parse(File.read(config_path))
+      JSON.parse(File.read(GLOBAL_CONFIG_PATH))
     else
-      {}
+      nil
     end
   end
 
-  GLOBAL_CONFIG = load_global_config
-  API_KEY_PATH = find_api_key_path
+  # API 키 경로 결정 (프로젝트 로컬 → 공용 위치)
+  def find_api_key_path(config)
+    local_key = Dir.glob("fastlane/AuthKey_*.p8").first
+    return local_key if local_key
+
+    if config && config.dig("default", "key_file")
+      global_key = "#{GLOBAL_CONFIG_DIR}/#{config.dig("default", "key_file")}"
+      return global_key if File.exist?(global_key)
+    end
+
+    nil
+  end
+
+  # 설정 검증 및 에러 표시
+  def validate_api_config!
+    config = load_global_config
+    key_path = find_api_key_path(config)
+
+    if config.nil? || key_path.nil?
+      puts ""
+      puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      puts "❌ App Store Connect API 키가 설정되지 않았습니다!"
+      puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      puts ""
+      puts "📁 설정 방법:"
+      puts ""
+      puts "1. 디렉토리 생성:"
+      puts "   mkdir -p ~/.appstore_keys"
+      puts ""
+      puts "2. API 키 파일 복사 (.p8 파일):"
+      puts "   cp /path/to/AuthKey_XXXXXX.p8 ~/.appstore_keys/"
+      puts ""
+      puts "3. config.json 생성:"
+      puts "   cat > ~/.appstore_keys/config.json << 'EOF'"
+      puts '   {'
+      puts '     "default": {'
+      puts '       "key_id": "YOUR_KEY_ID",'
+      puts '       "issuer_id": "YOUR_ISSUER_ID",'
+      puts '       "key_file": "AuthKey_XXXXXX.p8"'
+      puts '     },'
+      puts '     "apple_id": "your-email@example.com",'
+      puts '     "team_id": "XXXXXXXXXX"'
+      puts '   }'
+      puts "   EOF"
+      puts ""
+      puts "📌 API 키 발급 방법:"
+      puts "   1. https://appstoreconnect.apple.com 접속"
+      puts "   2. Users and Access → Keys → App Store Connect API"
+      puts "   3. + 버튼으로 새 키 생성 (Admin 권한)"
+      puts "   4. Key ID, Issuer ID 복사"
+      puts "   5. .p8 파일 다운로드"
+      puts ""
+      puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      UI.user_error!("API 키 설정이 필요합니다. 위 가이드를 참고하세요.")
+    end
+
+    { config: config, key_path: key_path }
+  end
+
+  # 설정 검증
+  API_CONFIG = validate_api_config!
+  GLOBAL_CONFIG = API_CONFIG[:config]
 
   API_KEY = app_store_connect_api_key(
-    key_id: GLOBAL_CONFIG.dig("default", "key_id") || "YOUR_KEY_ID",
-    issuer_id: GLOBAL_CONFIG.dig("default", "issuer_id") || "YOUR_ISSUER_ID",
-    key_filepath: API_KEY_PATH || "fastlane/AuthKey_XXXXX.p8"
+    key_id: GLOBAL_CONFIG.dig("default", "key_id"),
+    issuer_id: GLOBAL_CONFIG.dig("default", "issuer_id"),
+    key_filepath: API_CONFIG[:key_path]
   )
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
