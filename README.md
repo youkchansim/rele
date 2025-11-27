@@ -29,20 +29,35 @@ iOS 개발 자동화를 위한 개인 Skill 마켓플레이스입니다.
 
 ## ios-fastlane-deploy 사용법
 
-### 빠른 시작
+### 빠른 시작 (새 프로젝트)
 
 ```bash
-# TestFlight 배포
-fastlane beta
+# 1. 대화형 설정 스크립트 실행 (권장!)
+~/rele/skills/ios-fastlane-deploy/scripts/setup.sh /path/to/project
 
-# App Store 배포
-fastlane release
+# 설정 스크립트가 자동으로:
+# - Xcode 프로젝트 감지
+# - Bundle ID, Team ID 자동 감지
+# - API 키 설정
+# - 기존 App Store 앱이면 메타데이터 다운로드
+# - 템플릿 파일 복사 및 설정
 
-# 빌드만
-fastlane build_only
+# 2. 배포
+fastlane beta       # TestFlight
+fastlane release    # App Store
 ```
 
-### 새 프로젝트에 적용
+### 배포 명령어
+
+```bash
+fastlane beta           # TestFlight 배포
+fastlane release        # App Store 배포 (심사 제출)
+fastlane build_only     # 빌드만
+fastlane sync_metadata  # App Store에서 메타데이터 다운로드
+fastlane upload_metadata # 메타데이터만 업로드
+```
+
+### 수동 설정 (선택)
 
 1. 템플릿 복사:
    ```bash

@@ -26,6 +26,8 @@ iOS 앱의 자동 배포를 위한 완전한 솔루션입니다.
 
 ## 기능
 
+- **자동 초기 설정**: 대화형 설정 스크립트로 빠른 구성
+- **메타데이터 동기화**: App Store에서 앱 설명, 스크린샷 자동 다운로드
 - **App Store 배포**: 빌드 → 업로드 → 심사 제출 자동화
 - **TestFlight 베타**: 테스터에게 빠른 배포
 - **자동 버전 관리**: ChatGPT 스타일 (`MAJOR.YEAR.MMDDNNN`)
@@ -42,6 +44,20 @@ MAJOR.YEAR.MMDDNNN
 
 ## 사용법
 
+### 초기 설정 (새 프로젝트)
+
+```bash
+# 대화형 설정 스크립트 실행 (권장)
+~/rele/skills/ios-fastlane-deploy/scripts/setup.sh /path/to/project
+
+# 설정 스크립트가 수행하는 작업:
+# 1. Xcode 프로젝트 자동 감지
+# 2. Bundle ID, Team ID 자동 감지
+# 3. API 키 설정
+# 4. 기존 App Store 앱이면 메타데이터 다운로드
+# 5. 템플릿 파일 복사 및 설정
+```
+
 ### 배포 명령어
 
 ```bash
@@ -53,26 +69,28 @@ fastlane beta
 
 # 빌드만 (업로드 없이)
 fastlane build_only
+
+# 메타데이터 다운로드 (App Store에서)
+fastlane sync_metadata
+
+# 메타데이터 업로드 (바이너리 없이)
+fastlane upload_metadata
 ```
 
-### 새 프로젝트에 적용
+### 수동 설정 (선택)
 
-1. **Fastlane 초기화**
+1. **템플릿 복사**
    ```bash
-   cd /path/to/project
-   fastlane init
+   cp ~/rele/skills/ios-fastlane-deploy/assets/Fastfile.template ./fastlane/Fastfile
+   cp ~/rele/skills/ios-fastlane-deploy/assets/Appfile.template ./fastlane/Appfile
+   cp ~/rele/skills/ios-fastlane-deploy/assets/ExportOptions.plist ./fastlane/
    ```
 
-2. **템플릿 복사**
-   - `assets/Fastfile.template` → `fastlane/Fastfile`
-   - `assets/Appfile.template` → `fastlane/Appfile`
-   - `assets/ExportOptions.plist` → `fastlane/ExportOptions.plist`
-
-3. **설정 수정**
+2. **설정 수정**
    - `Appfile`: Bundle ID, Apple ID, Team ID 입력
    - `Fastfile`: PROJECT, SCHEME, MAJOR_VERSION 수정
 
-4. **API 키 설정**
+3. **API 키 설정**
    - App Store Connect → Users and Access → Keys
    - .p8 파일 다운로드 → `fastlane/AuthKey_XXXXX.p8`
    - Fastfile에 key_id, issuer_id 입력
