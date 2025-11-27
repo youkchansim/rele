@@ -1,0 +1,209 @@
+# Fastfile Template for iOS App Store Deployment
+# 버전 형식: MAJOR.YEAR.MMDDNNN (ChatGPT 스타일)
+#
+# 사용법:
+#   1. 이 파일을 프로젝트의 fastlane/Fastfile로 복사
+#   2. PROJECT, SCHEME, MAJOR_VERSION 수정
+#   3. API 키 정보 입력 (key_id, issuer_id, key_filepath)
+#
+# 명령어:
+#   fastlane release    - App Store 배포
+#   fastlane beta       - TestFlight 배포
+#   fastlane build_only - 빌드만
+
+default_platform(:ios)
+
+platform :ios do
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔧 프로젝트 설정 (수정 필요)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PROJECT = "YourApp.xcodeproj"     # Xcode 프로젝트 파일명
+  SCHEME = "YourApp"                 # 빌드 Scheme 이름
+  BUNDLE_ID = "com.yourcompany.app"  # Bundle Identifier
+  MAJOR_VERSION = "1"                # 메이저 버전 (큰 변경 시 수동 증가)
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔐 App Store Connect API 키 설정
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  API_KEY = app_store_connect_api_key(
+    key_id: "YOUR_KEY_ID",                      # API Key ID
+    issuer_id: "YOUR_ISSUER_ID",                # Issuer ID
+    key_filepath: "fastlane/AuthKey_XXXXX.p8"   # .p8 파일 경로
+  )
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 📌 버전 자동 생성 (ChatGPT 스타일: MAJOR.YEAR.MMDDNNN)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  desc "자동 버전 생성"
+  private_lane :generate_version do
+    now = Time.now
+    year = now.strftime("%Y")
+    mmdd = now.strftime("%m%d")
+
+    current_version = get_version_number(
+      xcodeproj: PROJECT,
+      target: SCHEME
+    )
+
+    today_pattern = "#{MAJOR_VERSION}.#{year}.#{mmdd}"
+
+    if current_version.start_with?(today_pattern)
+      last_three = current_version[-3..-1].to_i
+      serial = format("%03d", last_three + 1)
+    else
+      serial = "001"
+    end
+
+    new_version = "#{today_pattern}#{serial}"
+    new_build = "#{year}#{mmdd}#{serial}"
+
+    { version: new_version, build: new_build }
+  end
+
+  desc "버전 업데이트 적용"
+  private_lane :apply_version do |options|
+    version_info = options[:version_info]
+
+    increment_version_number(
+      xcodeproj: PROJECT,
+      version_number: version_info[:version]
+    )
+
+    increment_build_number(
+      xcodeproj: PROJECT,
+      build_number: version_info[:build]
+    )
+
+    puts "📌 버전 업데이트: #{version_info[:version]} (#{version_info[:build]})"
+  end
+
+  before_all do
+    # Git 상태 확인 (필요 시 활성화)
+    # ensure_git_status_clean
+  end
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🚀 App Store 배포
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  desc "App Store 배포 (심사 제출 포함)"
+  desc "사용법: fastlane release"
+  lane :release do
+    version_info = generate_version
+    apply_version(version_info: version_info)
+
+    version = version_info[:version]
+    build_number = version_info[:build]
+
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts "📦 App Store 배포 시작"
+    puts "   버전: #{version}"
+    puts "   빌드: #{build_number}"
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    build_app(
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: "fastlane/ExportOptions.plist",
+      output_directory: "./build",
+      output_name: "#{SCHEME}.ipa",
+      clean: true,
+      include_symbols: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    puts "✅ 빌드 완료: ./build/#{SCHEME}.ipa"
+
+    upload_to_app_store(
+      api_key: API_KEY,
+      skip_metadata: true,
+      skip_screenshots: true,
+      skip_binary_upload: false,
+      force: true,
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false
+      },
+      release_notes: {
+        "default" => "Bug fixes and performance improvements.",
+        "en-US" => "Bug fixes and performance improvements.",
+        "ko" => "버그 수정 및 성능을 개선했어요!"
+      }
+    )
+
+    puts "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts "✅ App Store 배포 완료!"
+    puts "   버전: #{version} (#{build_number})"
+    puts "   상태: 심사 대기 중"
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  end
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🧪 TestFlight 베타 배포
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  desc "TestFlight 베타 배포"
+  desc "사용법: fastlane beta"
+  lane :beta do
+    version_info = generate_version
+    apply_version(version_info: version_info)
+
+    version = version_info[:version]
+    build_number = version_info[:build]
+
+    puts "🧪 TestFlight 배포: #{version} (#{build_number})"
+
+    build_app(
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: "fastlane/ExportOptions.plist",
+      output_directory: "./build",
+      output_name: "#{SCHEME}.ipa",
+      clean: true,
+      include_symbols: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    upload_to_testflight(
+      api_key: API_KEY,
+      skip_waiting_for_build_processing: true
+    )
+
+    puts "✅ TestFlight 업로드 완료!"
+  end
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔨 빌드만 (업로드 없이)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  desc "빌드만 수행 (업로드 없이)"
+  desc "사용법: fastlane build_only"
+  lane :build_only do
+    version_info = generate_version
+    apply_version(version_info: version_info)
+
+    version = version_info[:version]
+    build_number = version_info[:build]
+
+    puts "🔨 빌드만 수행: #{version} (#{build_number})"
+
+    build_app(
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: "fastlane/ExportOptions.plist",
+      output_directory: "./build",
+      output_name: "#{SCHEME}.ipa",
+      clean: true,
+      include_symbols: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    puts "✅ 빌드 완료: ./build/#{SCHEME}.ipa"
+  end
+
+  error do |lane, exception|
+    puts "❌ 에러 발생: #{exception.message}"
+  end
+end

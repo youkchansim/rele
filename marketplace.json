@@ -1,0 +1,22 @@
+{
+  "name": "rele",
+  "version": "1.0.0",
+  "description": "iOS 개발 자동화를 위한 개인 Skill 마켓플레이스",
+  "owner": {
+    "name": "YouK Chan Sim",
+    "github": "youkchansim"
+  },
+  "skills": [
+    {
+      "name": "ios-fastlane-deploy",
+      "description": "iOS 앱 자동 배포 (App Store, TestFlight, 버전 자동화)",
+      "path": "skills/ios-fastlane-deploy",
+      "version": "1.0.0",
+      "tags": ["ios", "fastlane", "deployment", "automation"]
+    }
+  ],
+  "categories": {
+    "deployment": ["ios-fastlane-deploy"],
+    "ios": ["ios-fastlane-deploy"]
+  }
+}

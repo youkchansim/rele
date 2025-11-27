@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Store 배포 방식 -->
+	<key>method</key>
+	<string>app-store</string>
+
+	<!-- 자동 사이닝 (Automatic Signing) -->
+	<!-- Xcode가 인증서 및 프로비저닝 프로파일 자동 처리 -->
+	<key>signingStyle</key>
+	<string>automatic</string>
+
+	<!-- Developer Team ID (수정 필요) -->
+	<key>teamID</key>
+	<string>XXXXXXXXXX</string>
+
+	<!-- 심볼 업로드 활성화 (크래시 분석용) -->
+	<key>uploadSymbols</key>
+	<true/>
+
+	<!-- App Store Connect 직접 업로드 -->
+	<key>destination</key>
+	<string>upload</string>
+
+	<!-- Universal 앱 빌드 (모든 디바이스 지원) -->
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+
+	<!-- Swift 심볼 제거 (앱 크기 최적화) -->
+	<key>stripSwiftSymbols</key>
+	<true/>
+
+	<!-- 앱 버전 및 빌드 번호 자동 관리 -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<true/>
+</dict>
+</plist>
