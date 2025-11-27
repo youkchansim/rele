@@ -1,31 +1,38 @@
 # rele
 
-iOS 개발 자동화를 위한 개인 Skill 마켓플레이스입니다.
+개인 사이드 프로젝트를 위한 Skills 마켓플레이스입니다.
 
 ## 설치 방법
 
-### 방법 1: Plugin으로 설치
+### 방법 1: Plugin Marketplace로 설치 (권장)
 
 ```bash
-# Claude Code에서 실행
-/install-plugin youkchansim/rele
+# Claude Code에서 마켓플레이스 추가
+/plugin marketplace add youkchansim/rele
+
+# 스킬 설치
+/plugin install ios-fastlane-deploy@rele
 ```
 
-### 방법 2: 프로젝트에 직접 연결
+### 방법 2: 직접 스킬 복사
 
-각 프로젝트의 `.claude/settings.json`에 추가:
+개인 스킬로 설치 (모든 프로젝트에서 사용):
+```bash
+cp -r ~/rele/skills/ios-fastlane-deploy ~/.claude/skills/
+```
 
-```json
-{
-  "pluginRepositories": ["youkchansim/rele"]
-}
+프로젝트 스킬로 설치 (팀 공유):
+```bash
+cp -r ~/rele/skills/ios-fastlane-deploy ./.claude/skills/
+git add .claude/skills/ios-fastlane-deploy
+git commit -m "Add ios-fastlane-deploy skill"
 ```
 
 ## 사용 가능한 Skill
 
-| Skill | 설명 | 버전 |
-|-------|------|------|
-| [ios-fastlane-deploy](./skills/ios-fastlane-deploy) | iOS 앱 자동 배포 (App Store, TestFlight) | 1.0.0 |
+| Skill | 설명 |
+|-------|------|
+| [ios-fastlane-deploy](./skills/ios-fastlane-deploy) | iOS 앱 자동 배포 (App Store, TestFlight) |
 
 ## ios-fastlane-deploy 사용법
 

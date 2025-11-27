@@ -162,7 +162,7 @@ echo ""
 
 # 4. Bundle ID 자동 감지
 echo -e "${YELLOW}4️⃣  Bundle ID 감지...${NC}"
-BUNDLE_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "PRODUCT_BUNDLE_IDENTIFIER" | head -1 | awk '{print $3}')
+BUNDLE_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER = " | head -1 | awk -F' = ' '{print $2}')
 if [ -z "$BUNDLE_ID" ]; then
     echo -e "   ${RED}❌ Bundle ID를 감지할 수 없습니다${NC}"
     exit 1
