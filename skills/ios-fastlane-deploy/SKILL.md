@@ -31,6 +31,7 @@ iOS 앱의 자동 배포를 위한 완전한 솔루션입니다.
 - **App Store 배포**: 빌드 → 업로드 → 심사 제출 자동화
 - **TestFlight 베타**: 테스터에게 빠른 배포
 - **자동 버전 관리**: ChatGPT 스타일 (`MAJOR.YEAR.MMDDNNN`)
+- **스마트 릴리즈노트**: 기본값, 파일, AI 생성 지원
 - **위젯 Extension**: 메인 앱과 함께 자동 빌드
 - **API 키 인증**: 2FA 없이 안정적인 배포
 
@@ -61,8 +62,11 @@ MAJOR.YEAR.MMDDNNN
 ### 배포 명령어
 
 ```bash
-# App Store 배포 (심사 제출 포함)
+# App Store 배포 (기본 릴리즈노트: "안정성을 개선하였어요")
 fastlane release
+
+# App Store 배포 (커스텀 릴리즈노트)
+fastlane release notes:"새로운 기능이 추가되었어요!"
 
 # TestFlight 베타 배포
 fastlane beta
@@ -76,6 +80,50 @@ fastlane sync_metadata
 # 메타데이터 업로드 (바이너리 없이)
 fastlane upload_metadata
 ```
+
+## 릴리즈노트 작성
+
+### 옵션 1: 기본값 (파라미터 없이)
+```bash
+fastlane release
+# → "안정성을 개선하였어요." (한국어)
+# → "Improved stability and performance." (영어)
+```
+
+### 옵션 2: 직접 지정
+```bash
+fastlane release notes:"새로운 AI 플래너 기능이 추가되었어요!"
+```
+
+### 옵션 3: 파일로 작성 (다국어 지원)
+
+`fastlane/release_notes.txt` 파일 생성:
+```
+[ko]
+새로운 기능이 추가되었어요!
+- AI 플래너 기능
+- 복습 알림 개선
+
+[en-US]
+New features added!
+- AI Planner feature
+- Improved review notifications
+```
+
+배포 후 파일은 자동 삭제됩니다.
+
+### 옵션 4: AI가 자동 생성 (Claude Code 연동)
+
+Claude Code에서 배포 요청 시:
+```
+"최근 커밋 내용을 분석해서 사용자 친화적인 릴리즈노트를 작성하고 배포해줘"
+```
+
+Claude가 다음을 수행:
+1. `git log`로 최근 변경사항 분석
+2. 사용자 관점의 릴리즈노트 작성
+3. `fastlane/release_notes.txt`에 저장
+4. `fastlane release` 실행
 
 ### 수동 설정 (선택)
 

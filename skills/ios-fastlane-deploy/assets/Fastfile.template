@@ -7,9 +7,15 @@
 #   3. API 키 정보 입력 (key_id, issuer_id, key_filepath)
 #
 # 명령어:
-#   fastlane release    - App Store 배포
-#   fastlane beta       - TestFlight 배포
-#   fastlane build_only - 빌드만
+#   fastlane release                    - App Store 배포 (기본 릴리즈노트)
+#   fastlane release notes:"커스텀 노트" - App Store 배포 (커스텀 릴리즈노트)
+#   fastlane beta                       - TestFlight 배포
+#   fastlane build_only                 - 빌드만
+#
+# 릴리즈노트 옵션:
+#   1. 파라미터 없음: 기본값 사용 ("안정성을 개선하였어요")
+#   2. notes:"텍스트": 직접 지정
+#   3. fastlane/release_notes.txt 파일이 있으면 해당 내용 사용
 
 default_platform(:ios)
 
@@ -78,6 +84,78 @@ platform :ios do
     puts "📌 버전 업데이트: #{version_info[:version]} (#{version_info[:build]})"
   end
 
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 📝 릴리즈노트 생성
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 우선순위:
+  #   1. 파라미터로 전달된 notes
+  #   2. fastlane/release_notes.txt 파일
+  #   3. 기본값
+  desc "릴리즈노트 가져오기"
+  private_lane :get_release_notes do |options|
+    custom_notes = options[:notes]
+    notes_file = "fastlane/release_notes.txt"
+
+    # 기본 릴리즈노트
+    default_notes = {
+      "en-US" => "Improved stability and performance.",
+      "ko" => "안정성을 개선하였어요."
+    }
+
+    if custom_notes && !custom_notes.empty?
+      # 1. 파라미터로 전달된 노트 사용
+      puts "📝 릴리즈노트: 커스텀 (파라미터)"
+      {
+        "default" => custom_notes,
+        "en-US" => custom_notes,
+        "ko" => custom_notes
+      }
+    elsif File.exist?(notes_file)
+      # 2. 파일에서 읽기
+      content = File.read(notes_file).strip
+      puts "📝 릴리즈노트: 파일 (#{notes_file})"
+
+      # 파일 형식 파싱 (언어별 구분 지원)
+      # 형식:
+      # [ko]
+      # 한국어 노트
+      # [en-US]
+      # English notes
+      if content.include?("[ko]") || content.include?("[en-US]")
+        notes = { "default" => "" }
+        current_lang = "default"
+
+        content.each_line do |line|
+          line = line.strip
+          if line.match(/^\[(.+)\]$/)
+            current_lang = $1
+            notes[current_lang] ||= ""
+          elsif !line.empty?
+            notes[current_lang] += (notes[current_lang].empty? ? "" : "\n") + line
+          end
+        end
+
+        notes["default"] = notes["ko"] || notes["en-US"] || content
+        notes
+      else
+        # 단일 언어 (한국어로 간주)
+        {
+          "default" => content,
+          "en-US" => content,
+          "ko" => content
+        }
+      end
+    else
+      # 3. 기본값 사용
+      puts "📝 릴리즈노트: 기본값"
+      {
+        "default" => default_notes["ko"],
+        "en-US" => default_notes["en-US"],
+        "ko" => default_notes["ko"]
+      }
+    end
+  end
+
   before_all do
     # Git 상태 확인 (필요 시 활성화)
     # ensure_git_status_clean
@@ -87,18 +165,22 @@ platform :ios do
   # 🚀 App Store 배포
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   desc "App Store 배포 (심사 제출 포함)"
-  desc "사용법: fastlane release"
-  lane :release do
+  desc "사용법: fastlane release [notes:'릴리즈노트']"
+  lane :release do |options|
     version_info = generate_version
     apply_version(version_info: version_info)
 
     version = version_info[:version]
     build_number = version_info[:build]
 
+    # 릴리즈노트 가져오기
+    release_notes = get_release_notes(notes: options[:notes])
+
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "📦 App Store 배포 시작"
     puts "   버전: #{version}"
     puts "   빌드: #{build_number}"
+    puts "   릴리즈노트 (ko): #{release_notes['ko']&.slice(0, 50)}..."
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     build_app(
@@ -126,11 +208,7 @@ platform :ios do
       submission_information: {
         add_id_info_uses_idfa: false
       },
-      release_notes: {
-        "default" => "Bug fixes and performance improvements.",
-        "en-US" => "Bug fixes and performance improvements.",
-        "ko" => "버그 수정 및 성능을 개선했어요!"
-      }
+      release_notes: release_notes
     )
 
     puts "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -138,6 +216,13 @@ platform :ios do
     puts "   버전: #{version} (#{build_number})"
     puts "   상태: 심사 대기 중"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # 릴리즈노트 파일 정리 (사용 후 삭제)
+    notes_file = "fastlane/release_notes.txt"
+    if File.exist?(notes_file)
+      File.delete(notes_file)
+      puts "🗑️  릴리즈노트 파일 삭제됨"
+    end
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
