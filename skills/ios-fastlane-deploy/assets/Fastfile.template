@@ -32,10 +32,34 @@ platform :ios do
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🔐 App Store Connect API 키 설정
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 공용 키 위치: ~/.appstore_keys/
+  # 프로젝트별 키가 필요하면 fastlane/AuthKey_*.p8 사용
+
+  # API 키 경로 결정 (프로젝트 로컬 → 공용 위치)
+  def find_api_key_path
+    local_key = Dir.glob("fastlane/AuthKey_*.p8").first
+    global_key = Dir.glob(File.expand_path("~/.appstore_keys/AuthKey_*.p8")).first
+    local_key || global_key
+  end
+
+  # 공용 설정 로드
+  def load_global_config
+    config_path = File.expand_path("~/.appstore_keys/config.json")
+    if File.exist?(config_path)
+      require 'json'
+      JSON.parse(File.read(config_path))
+    else
+      {}
+    end
+  end
+
+  GLOBAL_CONFIG = load_global_config
+  API_KEY_PATH = find_api_key_path
+
   API_KEY = app_store_connect_api_key(
-    key_id: "YOUR_KEY_ID",                      # API Key ID
-    issuer_id: "YOUR_ISSUER_ID",                # Issuer ID
-    key_filepath: "fastlane/AuthKey_XXXXX.p8"   # .p8 파일 경로
+    key_id: GLOBAL_CONFIG.dig("default", "key_id") || "YOUR_KEY_ID",
+    issuer_id: GLOBAL_CONFIG.dig("default", "issuer_id") || "YOUR_ISSUER_ID",
+    key_filepath: API_KEY_PATH || "fastlane/AuthKey_XXXXX.p8"
   )
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

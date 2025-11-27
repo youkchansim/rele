@@ -29,10 +29,37 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 ASSETS_DIR="$SKILL_DIR/assets"
 
+# 공용 설정 경로
+GLOBAL_CONFIG_DIR="$HOME/.appstore_keys"
+GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config.json"
+
 # 프로젝트 경로
 PROJECT_ROOT="${1:-.}"
 cd "$PROJECT_ROOT"
 PROJECT_ROOT="$(pwd)"
+
+# 공용 설정 로드 함수
+load_global_config() {
+    if [ -f "$GLOBAL_CONFIG_FILE" ]; then
+        # jq가 있으면 사용, 없으면 grep으로 파싱
+        if command -v jq &> /dev/null; then
+            GLOBAL_APPLE_ID=$(jq -r '.apple_id // empty' "$GLOBAL_CONFIG_FILE")
+            GLOBAL_TEAM_ID=$(jq -r '.team_id // empty' "$GLOBAL_CONFIG_FILE")
+            GLOBAL_KEY_ID=$(jq -r '.default.key_id // empty' "$GLOBAL_CONFIG_FILE")
+            GLOBAL_ISSUER_ID=$(jq -r '.default.issuer_id // empty' "$GLOBAL_CONFIG_FILE")
+            GLOBAL_KEY_FILE=$(jq -r '.default.key_file // empty' "$GLOBAL_CONFIG_FILE")
+        else
+            GLOBAL_APPLE_ID=$(grep -o '"apple_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
+            GLOBAL_TEAM_ID=$(grep -o '"team_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
+            GLOBAL_KEY_ID=$(grep -o '"key_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
+            GLOBAL_ISSUER_ID=$(grep -o '"issuer_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
+            GLOBAL_KEY_FILE=$(grep -o '"key_file"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG_FILE" | cut -d'"' -f4)
+        fi
+    fi
+}
+
+# 공용 설정 로드
+load_global_config
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}🚀 iOS Fastlane 배포 환경 설정${NC}"
@@ -87,20 +114,41 @@ else
     read -p "   Bundle ID (예: com.company.app): " BUNDLE_ID
 fi
 
-read -p "   Apple ID (이메일): " APPLE_ID
-
-# Team ID 자동 감지 시도
-DETECTED_TEAM_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "DEVELOPMENT_TEAM" | head -1 | awk '{print $3}')
-if [ -n "$DETECTED_TEAM_ID" ] && [ "$DETECTED_TEAM_ID" != "" ]; then
-    echo -e "   감지된 Team ID: ${GREEN}$DETECTED_TEAM_ID${NC}"
-    read -p "   사용하시겠습니까? (Y/n): " USE_DETECTED_TEAM
-    if [[ "$USE_DETECTED_TEAM" =~ ^[Nn]$ ]]; then
-        read -p "   Team ID: " TEAM_ID
+# Apple ID (공용 설정 확인)
+if [ -n "$GLOBAL_APPLE_ID" ]; then
+    echo -e "   공용 설정 Apple ID: ${GREEN}$GLOBAL_APPLE_ID${NC}"
+    read -p "   사용하시겠습니까? (Y/n): " USE_GLOBAL_APPLE_ID
+    if [[ "$USE_GLOBAL_APPLE_ID" =~ ^[Nn]$ ]]; then
+        read -p "   Apple ID (이메일): " APPLE_ID
     else
-        TEAM_ID="$DETECTED_TEAM_ID"
+        APPLE_ID="$GLOBAL_APPLE_ID"
     fi
 else
-    read -p "   Team ID: " TEAM_ID
+    read -p "   Apple ID (이메일): " APPLE_ID
+fi
+
+# Team ID (공용 설정 → Xcode 감지 → 수동 입력)
+if [ -n "$GLOBAL_TEAM_ID" ]; then
+    echo -e "   공용 설정 Team ID: ${GREEN}$GLOBAL_TEAM_ID${NC}"
+    read -p "   사용하시겠습니까? (Y/n): " USE_GLOBAL_TEAM
+    if [[ ! "$USE_GLOBAL_TEAM" =~ ^[Nn]$ ]]; then
+        TEAM_ID="$GLOBAL_TEAM_ID"
+    fi
+fi
+
+if [ -z "$TEAM_ID" ]; then
+    DETECTED_TEAM_ID=$(xcodebuild -project "$XCODEPROJ" -target "$PROJECT_NAME" -showBuildSettings 2>/dev/null | grep "DEVELOPMENT_TEAM" | head -1 | awk '{print $3}')
+    if [ -n "$DETECTED_TEAM_ID" ] && [ "$DETECTED_TEAM_ID" != "" ]; then
+        echo -e "   감지된 Team ID: ${GREEN}$DETECTED_TEAM_ID${NC}"
+        read -p "   사용하시겠습니까? (Y/n): " USE_DETECTED_TEAM
+        if [[ "$USE_DETECTED_TEAM" =~ ^[Nn]$ ]]; then
+            read -p "   Team ID: " TEAM_ID
+        else
+            TEAM_ID="$DETECTED_TEAM_ID"
+        fi
+    else
+        read -p "   Team ID: " TEAM_ID
+    fi
 fi
 
 echo ""
@@ -109,17 +157,37 @@ echo ""
 # 4. API 키 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo -e "${YELLOW}4️⃣  App Store Connect API 키 설정${NC}"
-read -p "   API 키를 설정하시겠습니까? (Y/n): " SETUP_API_KEY
 
-if [[ ! "$SETUP_API_KEY" =~ ^[Nn]$ ]]; then
-    read -p "   Key ID: " API_KEY_ID
-    read -p "   Issuer ID: " API_ISSUER_ID
-    read -p "   .p8 파일 경로 (또는 Enter로 건너뛰기): " API_KEY_PATH
+# 공용 API 키 확인
+GLOBAL_KEY_PATH="$GLOBAL_CONFIG_DIR/$GLOBAL_KEY_FILE"
+if [ -n "$GLOBAL_KEY_ID" ] && [ -f "$GLOBAL_KEY_PATH" ]; then
+    echo -e "   ${GREEN}✅ 공용 API 키 발견${NC}"
+    echo -e "      Key ID: $GLOBAL_KEY_ID"
+    echo -e "      파일: $GLOBAL_KEY_PATH"
+    read -p "   공용 키를 사용하시겠습니까? (Y/n): " USE_GLOBAL_KEY
 
-    if [ -n "$API_KEY_PATH" ] && [ -f "$API_KEY_PATH" ]; then
-        mkdir -p fastlane
-        cp "$API_KEY_PATH" "fastlane/AuthKey_${API_KEY_ID}.p8"
-        echo -e "   ${GREEN}✅ API 키 파일 복사 완료${NC}"
+    if [[ ! "$USE_GLOBAL_KEY" =~ ^[Nn]$ ]]; then
+        API_KEY_ID="$GLOBAL_KEY_ID"
+        API_ISSUER_ID="$GLOBAL_ISSUER_ID"
+        USE_GLOBAL_API_KEY=true
+        echo -e "   ${GREEN}✅ 공용 API 키 사용${NC}"
+    fi
+fi
+
+# 공용 키를 사용하지 않는 경우
+if [ -z "$USE_GLOBAL_API_KEY" ]; then
+    read -p "   프로젝트별 API 키를 설정하시겠습니까? (y/N): " SETUP_API_KEY
+
+    if [[ "$SETUP_API_KEY" =~ ^[Yy]$ ]]; then
+        read -p "   Key ID: " API_KEY_ID
+        read -p "   Issuer ID: " API_ISSUER_ID
+        read -p "   .p8 파일 경로: " API_KEY_PATH
+
+        if [ -n "$API_KEY_PATH" ] && [ -f "$API_KEY_PATH" ]; then
+            mkdir -p fastlane
+            cp "$API_KEY_PATH" "fastlane/AuthKey_${API_KEY_ID}.p8"
+            echo -e "   ${GREEN}✅ API 키 파일 복사 완료${NC}"
+        fi
     fi
 fi
 echo ""
