@@ -6,7 +6,7 @@
     {
       "name": "ios-fastlane-deploy",
       "description": "iOS 앱 자동 배포 (App Store, TestFlight, 버전 자동화)",
-      "source": "skills/ios-fastlane-deploy"
+      "source": "ios-fastlane-deploy"
     }
   ]
 }

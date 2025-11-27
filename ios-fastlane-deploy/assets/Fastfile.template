@@ -348,19 +348,12 @@ platform :ios do
     puts "📥 메타데이터 동기화 시작"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # 메타데이터 다운로드 (앱 설명, 키워드, What's New 등)
-    puts "\n📝 메타데이터 다운로드 중..."
-    download_metadata(
-      api_key: API_KEY,
-      app_identifier: BUNDLE_ID
-    )
+    # 공용 API 키 경로 (deliver용 JSON 형식)
+    global_api_key_json = "#{GLOBAL_CONFIG_DIR}/api_key.json"
 
-    # 스크린샷 다운로드
-    puts "\n📸 스크린샷 다운로드 중..."
-    download_screenshots(
-      api_key: API_KEY,
-      app_identifier: BUNDLE_ID
-    )
+    # deliver init으로 메타데이터 + 스크린샷 모두 다운로드
+    puts "\n📝 메타데이터 & 스크린샷 다운로드 중..."
+    sh("fastlane deliver init --app_identifier '#{BUNDLE_ID}' --api_key_path '#{global_api_key_json}' --use_live_version true")
 
     puts "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "✅ 메타데이터 동기화 완료!"
