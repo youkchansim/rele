@@ -33,6 +33,7 @@ git commit -m "Add ios-fastlane-deploy skill"
 | Skill | 설명 |
 |-------|------|
 | [ios-fastlane-deploy](./ios-fastlane-deploy) | iOS 앱 자동 배포 (App Store, TestFlight) |
+| [design-pattern-architect](./design-pattern-architect) | 디자인 패턴 분석 및 추천 (과잉 설계 방지) |
 
 ## 라이선스
 
