@@ -1,0 +1,232 @@
+# iOS 배포 워크플로우
+#
+# 사용법:
+#   1. 이 파일을 프로젝트의 .github/workflows/ios-deploy.yml로 복사
+#   2. GitHub Secrets 설정 (아래 참고)
+#   3. 수동 실행 또는 태그 푸시로 배포
+#
+# 필요한 GitHub Secrets:
+#   APP_STORE_CONNECT_API_KEY_ID     - API Key ID
+#   APP_STORE_CONNECT_API_ISSUER_ID  - Issuer ID
+#   APP_STORE_CONNECT_API_KEY_BASE64 - .p8 파일을 Base64 인코딩한 값
+#   MATCH_PASSWORD                   - (선택) Match 암호
+#   MATCH_GIT_URL                    - (선택) Match 저장소 URL
+#
+# Base64 인코딩 방법:
+#   base64 -i AuthKey_XXXXXX.p8 | pbcopy
+
+name: iOS Deploy
+
+on:
+  # 수동 실행
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: '배포 타입'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - release
+      release_notes:
+        description: '릴리즈노트 (선택사항)'
+        required: false
+        type: string
+
+  # 태그 푸시 시 자동 배포
+  push:
+    tags:
+      - 'v*'           # v1.0.0 → App Store 배포
+      - 'beta-*'       # beta-* → TestFlight 배포
+
+# 동시 실행 방지
+concurrency:
+  group: ios-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔧 프로젝트 설정 (수정 필요)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  XCODE_PROJECT: "YourApp.xcodeproj"
+  SCHEME: "YourApp"
+  BUNDLE_ID: "com.yourcompany.app"
+
+  # Xcode 버전 (선택사항 - 기본값: latest)
+  # XCODE_VERSION: "15.0"
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📥 체크아웃 & 환경 설정
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 (버전 태그용)
+
+      - name: Select Xcode version
+        run: |
+          if [ -n "${{ env.XCODE_VERSION }}" ]; then
+            sudo xcode-select -s /Applications/Xcode_${{ env.XCODE_VERSION }}.app
+          fi
+          xcodebuild -version
+          swift --version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true  # Gemfile.lock 캐싱
+
+      - name: Install Fastlane
+        run: |
+          if [ -f "Gemfile" ]; then
+            bundle install
+          else
+            gem install fastlane
+          fi
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🔐 인증 설정
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Setup App Store Connect API Key
+        run: |
+          mkdir -p ~/.appstore_keys
+
+          # Base64 디코딩하여 .p8 파일 생성
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" | base64 --decode > ~/.appstore_keys/AuthKey.p8
+
+          # config.json 생성
+          cat > ~/.appstore_keys/config.json << EOF
+          {
+            "default": {
+              "key_id": "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}",
+              "issuer_id": "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}",
+              "key_file": "AuthKey.p8"
+            }
+          }
+          EOF
+
+      - name: Setup Keychain
+        run: |
+          # 임시 키체인 생성 (CI 환경용)
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+
+          # 코드 서명 권한 허용
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📦 의존성 캐싱
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Resolve SPM dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project "${{ env.XCODE_PROJECT }}" \
+            -scheme "${{ env.SCHEME }}"
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🚀 배포 실행
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Determine deployment type
+        id: deploy-type
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "lane=${{ github.event.inputs.lane }}" >> $GITHUB_OUTPUT
+            echo "notes=${{ github.event.inputs.release_notes }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "lane=release" >> $GITHUB_OUTPUT
+            echo "notes=" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/beta-* ]]; then
+            echo "lane=beta" >> $GITHUB_OUTPUT
+            echo "notes=" >> $GITHUB_OUTPUT
+          else
+            echo "lane=beta" >> $GITHUB_OUTPUT
+            echo "notes=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Fastlane
+        run: |
+          LANE="${{ steps.deploy-type.outputs.lane }}"
+          NOTES="${{ steps.deploy-type.outputs.notes }}"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 배포 시작"
+          echo "   Lane: $LANE"
+          echo "   Notes: ${NOTES:-'(기본값 사용)'}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          if [ -n "$NOTES" ]; then
+            bundle exec fastlane "$LANE" notes:"$NOTES"
+          else
+            bundle exec fastlane "$LANE"
+          fi
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📤 아티팩트 업로드
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipa-${{ github.run_number }}
+          path: build/*.ipa
+          retention-days: 7
+
+      - name: Upload dSYM artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dsym-${{ github.run_number }}
+          path: build/*.dSYM.zip
+          retention-days: 30
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🧹 정리
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Cleanup secrets
+        if: always()
+        run: |
+          rm -rf ~/.appstore_keys
+          security delete-keychain build.keychain 2>/dev/null || true
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📢 알림 (선택사항)
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ 배포 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 배포 타입 | ${{ steps.deploy-type.outputs.lane }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 트리거 | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 커밋 | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행 번호 | #${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Failure Summary
+        if: failure()
+        run: |
+          echo "## ❌ 배포 실패" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "로그를 확인하고 문제를 해결해주세요." >> $GITHUB_STEP_SUMMARY

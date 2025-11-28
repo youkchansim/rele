@@ -1,0 +1,155 @@
+# iOS 테스트 워크플로우
+#
+# PR 생성/업데이트 시 자동으로 빌드 및 테스트 실행
+# 메인 브랜치 푸시 시에도 실행
+
+name: iOS Test
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - '**/*.swift'
+      - '**/*.xcodeproj/**'
+      - '**/*.xcworkspace/**'
+      - '**/Package.swift'
+      - '**/Package.resolved'
+      - '.github/workflows/ios-test.yml'
+
+  push:
+    branches: [main, develop]
+    paths:
+      - '**/*.swift'
+      - '**/*.xcodeproj/**'
+      - '**/*.xcworkspace/**'
+      - '**/Package.swift'
+      - '**/Package.resolved'
+
+# 동일 PR의 이전 실행 취소
+concurrency:
+  group: ios-test-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔧 프로젝트 설정 (수정 필요)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  XCODE_PROJECT: "YourApp.xcodeproj"
+  SCHEME: "YourApp"
+  TEST_DESTINATION: "platform=iOS Simulator,name=iPhone 15,OS=latest"
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📦 캐싱
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-${{ hashFiles('**/*.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🔨 빌드 & 테스트
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Resolve dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project "${{ env.XCODE_PROJECT }}" \
+            -scheme "${{ env.SCHEME }}"
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project "${{ env.XCODE_PROJECT }}" \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.TEST_DESTINATION }}" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty --color
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project "${{ env.XCODE_PROJECT }}" \
+            -scheme "${{ env.SCHEME }}" \
+            -destination "${{ env.TEST_DESTINATION }}" \
+            -resultBundlePath TestResults.xcresult \
+            | xcpretty --color --report junit --output test-results.xml
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📊 결과 리포트
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            TestResults.xcresult
+            test-results.xml
+          retention-days: 7
+
+      - name: Test Summary
+        if: always()
+        run: |
+          if [ -f "test-results.xml" ]; then
+            echo "## 테스트 결과" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            # XML에서 테스트 수 추출 (간단한 버전)
+            TESTS=$(grep -o 'tests="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+            FAILURES=$(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+            echo "- 총 테스트: $TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- 실패: $FAILURES" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 🔍 SwiftLint (선택사항)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  lint:
+    name: SwiftLint
+    runs-on: macos-14
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run SwiftLint
+        run: |
+          if command -v swiftlint &> /dev/null; then
+            swiftlint lint --reporter github-actions-logging
+          elif [ -f ".swiftlint.yml" ]; then
+            brew install swiftlint
+            swiftlint lint --reporter github-actions-logging
+          else
+            echo "SwiftLint not configured, skipping..."
+          fi

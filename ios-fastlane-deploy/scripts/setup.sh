@@ -227,7 +227,44 @@ else
 fi
 echo ""
 
-# 7. 완료
+# 7. GitHub Actions 설정 (선택사항)
+echo -e "${YELLOW}7️⃣  GitHub Actions 설정...${NC}"
+SETUP_GITHUB_ACTIONS="n"
+if [ "$AUTO_MODE" = false ]; then
+    read -p "   GitHub Actions CI/CD를 설정하시겠습니까? (y/N): " SETUP_GITHUB_ACTIONS
+fi
+
+if [[ "$SETUP_GITHUB_ACTIONS" =~ ^[Yy]$ ]]; then
+    mkdir -p .github/workflows
+    cp "$ASSETS_DIR/.github/workflows/ios-deploy.yml" .github/workflows/
+    cp "$ASSETS_DIR/.github/workflows/ios-test.yml" .github/workflows/
+
+    # 워크플로우 파일 수정
+    sed -i '' "s/YourApp.xcodeproj/${PROJECT_NAME}.xcodeproj/g" .github/workflows/ios-deploy.yml
+    sed -i '' "s/SCHEME: \"YourApp\"/SCHEME: \"${PROJECT_NAME}\"/g" .github/workflows/ios-deploy.yml
+    sed -i '' "s/com.yourcompany.app/${BUNDLE_ID}/g" .github/workflows/ios-deploy.yml
+
+    sed -i '' "s/YourApp.xcodeproj/${PROJECT_NAME}.xcodeproj/g" .github/workflows/ios-test.yml
+    sed -i '' "s/SCHEME: \"YourApp\"/SCHEME: \"${PROJECT_NAME}\"/g" .github/workflows/ios-test.yml
+
+    echo -e "   ${GREEN}✅ GitHub Actions 워크플로우 생성${NC}"
+    echo ""
+    echo -e "   ${YELLOW}⚠️  GitHub Secrets 설정 필요:${NC}"
+    echo -e "      Repository → Settings → Secrets and variables → Actions"
+    echo ""
+    echo -e "   필요한 Secrets:"
+    echo -e "      • APP_STORE_CONNECT_API_KEY_ID"
+    echo -e "      • APP_STORE_CONNECT_API_ISSUER_ID"
+    echo -e "      • APP_STORE_CONNECT_API_KEY_BASE64"
+    echo ""
+    echo -e "   Base64 인코딩:"
+    echo -e "      ${BLUE}base64 -i ~/.appstore_keys/$GLOBAL_KEY_FILE | pbcopy${NC}"
+else
+    echo -e "   ${YELLOW}⏭️  GitHub Actions 설정 건너뜀${NC}"
+fi
+echo ""
+
+# 8. 완료
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✅ 설정 완료!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -237,9 +274,20 @@ echo -e "   📁 fastlane/"
 echo -e "      ├── Appfile"
 echo -e "      ├── Fastfile"
 echo -e "      └── ExportOptions.plist"
+if [[ "$SETUP_GITHUB_ACTIONS" =~ ^[Yy]$ ]]; then
+echo -e "   📁 .github/workflows/"
+echo -e "      ├── ios-deploy.yml"
+echo -e "      └── ios-test.yml"
+fi
 echo ""
 echo -e "사용 가능한 명령어:"
 echo -e "   ${BLUE}fastlane beta${NC}       - TestFlight 배포"
 echo -e "   ${BLUE}fastlane release${NC}    - App Store 배포"
 echo -e "   ${BLUE}fastlane build_only${NC} - 빌드만"
+if [[ "$SETUP_GITHUB_ACTIONS" =~ ^[Yy]$ ]]; then
+echo ""
+echo -e "GitHub Actions 배포:"
+echo -e "   ${BLUE}git tag beta-1.0.0 && git push origin beta-1.0.0${NC}  - TestFlight"
+echo -e "   ${BLUE}git tag v1.0.0 && git push origin v1.0.0${NC}          - App Store"
+fi
 echo ""

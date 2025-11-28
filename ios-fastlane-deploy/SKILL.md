@@ -43,6 +43,24 @@ MAJOR.YEAR.MMDDNNN
       1.2025.1127002 (같은 날 두 번째 빌드)
 ```
 
+### 버전 자동 커밋
+
+배포 성공 후 버전 변경 사항이 자동으로 커밋됩니다:
+
+```bash
+# 기본 동작: 배포 후 자동 커밋
+fastlane beta
+# → 배포 완료 후 "chore: bump version to 1.2025.1128001" 커밋 생성
+
+# 커밋 건너뛰기 (CI 환경에서 자동으로 건너뜀)
+fastlane beta skip_commit:true
+```
+
+**자동 커밋 조건:**
+- 로컬 환경에서만 동작 (CI 환경에서는 자동 스킵)
+- Git 저장소일 때만 동작
+- `project.pbxproj` 파일만 커밋 (버전 관련 변경만)
+
 ## 사용법
 
 ### 초기 설정 (새 프로젝트)
@@ -192,8 +210,71 @@ unzip -l ./build/App.ipa | grep -i widget
 ./scripts/validate.sh /path/to/project ProjectName
 ```
 
+## GitHub Actions CI/CD
+
+### 워크플로우 설정
+
+```bash
+# 템플릿 복사
+mkdir -p .github/workflows
+cp ~/rele/ios-fastlane-deploy/assets/.github/workflows/*.yml .github/workflows/
+```
+
+### 워크플로우 종류
+
+| 파일 | 용도 | 트리거 |
+|------|------|--------|
+| `ios-deploy.yml` | App Store/TestFlight 배포 | 수동, 태그 푸시 |
+| `ios-test.yml` | 빌드 & 테스트 | PR, 메인 브랜치 푸시 |
+
+### GitHub Secrets 설정
+
+Repository → Settings → Secrets and variables → Actions에서 설정:
+
+| Secret 이름 | 설명 | 예시 |
+|------------|------|------|
+| `APP_STORE_CONNECT_API_KEY_ID` | API Key ID | `XXXXXXXXXX` |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | .p8 파일 Base64 인코딩 | (아래 명령어 참고) |
+
+```bash
+# .p8 파일을 Base64로 인코딩
+base64 -i AuthKey_XXXXXX.p8 | pbcopy
+# 클립보드에 복사됨 → GitHub Secret에 붙여넣기
+```
+
+### 배포 방법
+
+#### 1. 수동 배포 (Actions 탭에서)
+1. Actions → iOS Deploy → Run workflow
+2. 배포 타입 선택 (beta/release)
+3. 릴리즈노트 입력 (선택)
+
+#### 2. 태그로 자동 배포
+```bash
+# TestFlight 배포
+git tag beta-1.0.0
+git push origin beta-1.0.0
+
+# App Store 배포
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### 워크플로우 커스터마이징
+
+`.github/workflows/ios-deploy.yml` 수정:
+
+```yaml
+env:
+  XCODE_PROJECT: "YourApp.xcodeproj"  # 프로젝트 파일명
+  SCHEME: "YourApp"                    # 빌드 Scheme
+  BUNDLE_ID: "com.yourcompany.app"     # Bundle ID
+```
+
 ## 참고 자료
 
 - [Fastlane 공식 문서](https://docs.fastlane.tools)
 - [App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi)
 - [Xcode 빌드 가이드](https://developer.apple.com/documentation/xcode)
+- [GitHub Actions for iOS](https://docs.github.com/en/actions/deployment/deploying-xcode-applications)

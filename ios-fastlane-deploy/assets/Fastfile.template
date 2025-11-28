@@ -12,6 +12,9 @@
 #   fastlane beta                       - TestFlight 배포
 #   fastlane build_only                 - 빌드만
 #
+# 옵션:
+#   skip_commit:true  - 버전 변경 커밋 건너뛰기 (CI 환경에서 유용)
+#
 # 릴리즈노트 옵션:
 #   1. 파라미터 없음: 기본값 사용 ("안정성을 개선하였어요")
 #   2. notes:"텍스트": 직접 지정
@@ -164,6 +167,46 @@ platform :ios do
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 📝 버전 변경 자동 커밋
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  desc "버전 변경 사항을 Git에 커밋"
+  private_lane :commit_version do |options|
+    version = options[:version]
+    skip_commit = options[:skip_commit] || false
+
+    # CI 환경이거나 skip_commit 옵션이 있으면 건너뛰기
+    if skip_commit || ENV['CI'] == 'true'
+      puts "⏭️  버전 커밋 건너뜀 (CI 환경 또는 skip_commit 옵션)"
+      next
+    end
+
+    # Git 저장소인지 확인
+    unless File.directory?(".git")
+      puts "⚠️  Git 저장소가 아닙니다. 커밋 건너뜀."
+      next
+    end
+
+    # 변경된 파일 확인
+    changed_files = sh("git diff --name-only", log: false).strip
+    if changed_files.empty?
+      puts "ℹ️  변경된 파일 없음"
+      next
+    end
+
+    # project.pbxproj 파일만 커밋 (버전 변경)
+    project_file = "#{PROJECT}/project.pbxproj"
+    if changed_files.include?("project.pbxproj")
+      git_add(path: project_file)
+      git_commit(
+        path: project_file,
+        message: "chore: bump version to #{version}",
+        allow_nothing_to_commit: true
+      )
+      puts "✅ 버전 변경 커밋 완료: #{version}"
+    end
+  end
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 📝 릴리즈노트 생성
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 우선순위:
@@ -278,8 +321,8 @@ platform :ios do
 
     upload_to_app_store(
       api_key: API_KEY,
-      skip_metadata: true,
-      skip_screenshots: true,
+      skip_metadata: false,
+      skip_screenshots: false,
       skip_binary_upload: false,
       force: true,
       submit_for_review: true,
@@ -302,14 +345,17 @@ platform :ios do
       File.delete(notes_file)
       puts "🗑️  릴리즈노트 파일 삭제됨"
     end
+
+    # 버전 변경 자동 커밋
+    commit_version(version: version, skip_commit: options[:skip_commit])
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🧪 TestFlight 베타 배포
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   desc "TestFlight 베타 배포"
-  desc "사용법: fastlane beta"
-  lane :beta do
+  desc "사용법: fastlane beta [skip_commit:true]"
+  lane :beta do |options|
     version_info = generate_version
     apply_version(version_info: version_info)
 
@@ -336,6 +382,9 @@ platform :ios do
     )
 
     puts "✅ TestFlight 업로드 완료!"
+
+    # 버전 변경 자동 커밋
+    commit_version(version: version, skip_commit: options[:skip_commit])
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
