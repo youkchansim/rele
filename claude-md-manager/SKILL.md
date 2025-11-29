@@ -207,13 +207,21 @@ Always check for:
 - Outdated or unused documentation
 - Inconsistent structure
 
-## Best Practices Reference
+## Reference Files
 
-Load `references/best-practices.md` for:
-- @ import syntax rules
-- Known limitations (global CLAUDE.md bug)
-- Token optimization strategies
-- Directory structure conventions
+Load these references as needed during analysis and generation:
+
+- **`references/analysis-checklist.md`**: Load when analyzing projects
+  - Tech stack detection patterns (iOS, Android, Web, Backend)
+  - Build tools and CI/CD detection
+  - Documentation quality assessment criteria
+  - Code pattern detection (architecture, design system)
+
+- **`references/best-practices.md`**: Load when generating or optimizing
+  - @ import syntax rules and limitations
+  - Token optimization strategies
+  - Directory structure conventions
+  - Quality checklist
 
 ## Output Format
 
