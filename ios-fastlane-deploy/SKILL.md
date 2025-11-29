@@ -1,7 +1,7 @@
 ---
 name: ios-fastlane-deploy
-description: iOS 앱을 Fastlane으로 자동 빌드하고 App Store/TestFlight에 배포합니다. 버전 자동화(ChatGPT 스타일), 위젯 Extension 포함, API 키 인증을 지원합니다.
-version: 1.0.0
+description: iOS 앱을 Fastlane으로 자동 빌드하고 App Store/TestFlight에 배포합니다. 대화형 마법사로 단계별 설정을 지원합니다.
+version: 2.0.0
 author: YouK Chan Sim
 license: MIT
 allowed-tools:
@@ -11,6 +11,7 @@ allowed-tools:
   - Edit
   - Glob
   - Grep
+  - AskUserQuestion
 tags:
   - ios
   - fastlane
@@ -22,158 +23,379 @@ tags:
 
 # iOS Fastlane 배포 Skill
 
-iOS 앱의 자동 배포를 위한 완전한 솔루션입니다.
+iOS 앱의 자동 배포를 위한 완전한 솔루션입니다. **대화형 마법사**를 통해 단계별로 설정을 진행합니다.
 
-## 기능
+---
 
-- **자동 초기 설정**: 대화형 설정 스크립트로 빠른 구성
-- **메타데이터 동기화**: App Store에서 앱 설명, 스크린샷 자동 다운로드
-- **App Store 배포**: 빌드 → 업로드 → 심사 제출 자동화
-- **TestFlight 베타**: 테스터에게 빠른 배포
-- **자동 버전 관리**: ChatGPT 스타일 (`MAJOR.YEAR.MMDDNNN`)
-- **스마트 릴리즈노트**: 기본값, 파일, AI 생성 지원
-- **위젯 Extension**: 메인 앱과 함께 자동 빌드
-- **API 키 인증**: 2FA 없이 안정적인 배포
+## 🧙‍♂️ 대화형 설정 마법사
 
-## 버전 형식
+사용자가 "iOS 배포 설정해줘", "Fastlane 구축해줘" 등의 요청을 하면, 아래 단계별로 **AskUserQuestion** 도구를 사용하여 대화형으로 진행합니다.
+
+### 📋 설정 흐름도
 
 ```
-MAJOR.YEAR.MMDDNNN
-예시: 1.2025.1127001 (2025년 11월 27일 첫 번째 빌드)
-      1.2025.1127002 (같은 날 두 번째 빌드)
+[STEP 1] 프로젝트 분석 (자동)
+    ↓
+[STEP 2] 배포 대상 선택
+    ↓
+[STEP 3] 메타데이터 관리 방식
+    ↓
+[STEP 4] 심사/릴리즈 옵션
+    ↓
+[STEP 5] 버전 관리 방식
+    ↓
+[STEP 6] CI/CD 설정
+    ↓
+[STEP 7] 고급 옵션
+    ↓
+[완료] 설정 파일 생성
 ```
 
-### 버전 자동 커밋
+---
 
-배포 성공 후 버전 변경 사항이 자동으로 커밋됩니다:
+## 📝 단계별 질문 가이드
+
+Claude는 각 단계에서 AskUserQuestion 도구를 사용하여 사용자에게 질문합니다.
+
+### STEP 1: 프로젝트 분석 (자동)
+
+**Claude가 자동으로 수행:**
+1. Xcode 프로젝트 파일 탐색 (`*.xcodeproj`)
+2. Bundle ID 감지
+3. Team ID 감지
+4. 기존 fastlane 설정 확인
+5. App Store Connect 연결 상태 확인
 
 ```bash
-# 기본 동작: 배포 후 자동 커밋
-fastlane beta
-# → 배포 완료 후 "chore: bump version to 1.2025.1128001" 커밋 생성
-
-# 커밋 건너뛰기 (CI 환경에서 자동으로 건너뜀)
-fastlane beta skip_commit:true
+# 프로젝트 분석 명령어
+find . -maxdepth 1 -name "*.xcodeproj" -type d
+xcodebuild -project "*.xcodeproj" -showBuildSettings | grep PRODUCT_BUNDLE_IDENTIFIER
 ```
 
-**자동 커밋 조건:**
-- 로컬 환경에서만 동작 (CI 환경에서는 자동 스킵)
-- Git 저장소일 때만 동작
-- `project.pbxproj` 파일만 커밋 (버전 관련 변경만)
-
-## 사용법
-
-### 초기 설정 (새 프로젝트)
-
-```bash
-# 대화형 설정 스크립트 실행 (권장)
-~/rele/skills/ios-fastlane-deploy/scripts/setup.sh /path/to/project
-
-# 설정 스크립트가 수행하는 작업:
-# 1. Xcode 프로젝트 자동 감지
-# 2. Bundle ID, Team ID 자동 감지
-# 3. API 키 설정
-# 4. 기존 App Store 앱이면 메타데이터 다운로드
-# 5. 템플릿 파일 복사 및 설정
+**분석 결과 출력:**
 ```
+📊 프로젝트 분석 결과
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+프로젝트: YourApp.xcodeproj
+Bundle ID: com.yourcompany.app
+Team ID: XXXXXXXXXX
+기존 Fastlane: ❌ 없음
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+### STEP 2: 배포 대상 선택
+
+**질문:**
+```
+어디에 배포하시겠습니까?
+```
+
+**옵션:**
+| 옵션 | 설명 |
+|------|------|
+| TestFlight만 | 베타 테스터에게만 배포 (내부 테스트) |
+| App Store만 | 정식 출시만 (TestFlight 건너뜀) |
+| 둘 다 | TestFlight + App Store 모두 지원 (권장) |
+
+**설정 값:** `DEPLOY_TARGET` = `testflight` | `appstore` | `both`
+
+---
+
+### STEP 3: 메타데이터 관리 방식
+
+**질문:**
+```
+앱 메타데이터(설명, 스크린샷 등)를 어디서 관리하시겠습니까?
+```
+
+**옵션:**
+| 옵션 | 설명 |
+|------|------|
+| App Store Connect | 웹에서 직접 관리 (Fastlane은 건드리지 않음) |
+| Fastlane (로컬) | Git으로 버전 관리, 자동 업로드 |
+| 하이브리드 | 스크린샷만 Connect, 텍스트는 Fastlane |
+
+**설정 값:**
+```ruby
+# App Store Connect 관리
+skip_metadata: true
+skip_screenshots: true
+
+# Fastlane 관리
+skip_metadata: false
+skip_screenshots: false
+
+# 하이브리드
+skip_metadata: false
+skip_screenshots: true
+```
+
+**추가 질문 (Fastlane 선택 시):**
+```
+기존 App Store 메타데이터를 다운로드하시겠습니까?
+```
+- 예: `fastlane deliver download_metadata` 실행
+- 아니오: 빈 템플릿으로 시작
+
+---
+
+### STEP 4: 심사/릴리즈 옵션
+
+**질문:**
+```
+App Store 심사 및 릴리즈를 어떻게 처리하시겠습니까?
+```
+
+**옵션:**
+| 옵션 | 설명 |
+|------|------|
+| 완전 자동 | 업로드 → 심사 제출 → 승인 시 자동 릴리즈 |
+| 심사만 자동 | 업로드 → 심사 제출 (릴리즈는 수동) |
+| 업로드만 | 업로드만, 심사는 Connect에서 수동 |
+
+**설정 값:**
+```ruby
+# 완전 자동
+submit_for_review: true
+automatic_release: true
+
+# 심사만 자동
+submit_for_review: true
+automatic_release: false
+
+# 업로드만
+submit_for_review: false
+automatic_release: false
+```
+
+**추가 질문 (심사 자동 선택 시):**
+```
+앱에서 IDFA(광고 식별자)를 사용하나요?
+```
+- 예: `add_id_info_uses_idfa: true`
+- 아니오: `add_id_info_uses_idfa: false`
+
+---
+
+### STEP 5: 버전 관리 방식
+
+**질문:**
+```
+버전 번호를 어떻게 관리하시겠습니까?
+```
+
+**옵션:**
+| 옵션 | 설명 | 예시 |
+|------|------|------|
+| ChatGPT 스타일 (권장) | MAJOR.YEAR.MMDDNNN | 1.2025.1129001 |
+| Semantic Versioning | MAJOR.MINOR.PATCH | 1.2.3 |
+| 수동 | 직접 관리 | - |
+
+**설정 값:** `VERSION_STYLE` = `chatgpt` | `semver` | `manual`
+
+**추가 질문 (ChatGPT/SemVer 선택 시):**
+```
+현재 메이저 버전은 무엇인가요? (기본값: 1)
+```
+
+---
+
+### STEP 6: CI/CD 설정
+
+**질문:**
+```
+CI/CD 자동화를 설정하시겠습니까?
+```
+
+**옵션:**
+| 옵션 | 설명 |
+|------|------|
+| GitHub Actions | 가장 일반적, 무료 티어 제공 |
+| 로컬만 | CI/CD 없이 로컬에서만 배포 |
+| 나중에 | 지금은 건너뛰고 나중에 설정 |
+
+**추가 질문 (GitHub Actions 선택 시):**
+```
+어떤 이벤트에 배포를 트리거하시겠습니까?
+```
+| 옵션 | 설명 |
+|------|------|
+| 태그 푸시 | `v*` 태그 시 App Store, `beta-*` 태그 시 TestFlight |
+| 수동 트리거 | Actions 탭에서 수동 실행 |
+| 둘 다 | 태그 + 수동 모두 지원 |
+
+---
+
+### STEP 7: 고급 옵션
+
+**질문 (다중 선택):**
+```
+추가로 필요한 옵션을 선택해주세요. (다중 선택 가능)
+```
+
+**옵션:**
+| 옵션 | 설명 | 설정 |
+|------|------|------|
+| 위젯 Extension | 메인 앱과 위젯 함께 빌드 | scheme 확인 |
+| 버전 자동 커밋 | 배포 후 버전 변경 자동 커밋 | `skip_commit: false` |
+| 릴리즈노트 자동 생성 | Git 커밋 기반 AI 생성 | Claude 연동 |
+| 빌드 캐시 | DerivedData 캐싱 (CI용) | GitHub Actions cache |
+| Slack 알림 | 배포 완료 시 Slack 알림 | `slack` action 추가 |
+
+---
+
+## 🔧 설정 옵션 전체 목록
+
+### 배포 옵션 (upload_to_app_store)
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `skip_metadata` | bool | false | 메타데이터 업로드 건너뛰기 |
+| `skip_screenshots` | bool | false | 스크린샷 업로드 건너뛰기 |
+| `skip_binary_upload` | bool | false | 바이너리 업로드 건너뛰기 |
+| `submit_for_review` | bool | true | 심사 자동 제출 |
+| `automatic_release` | bool | true | 승인 후 자동 릴리즈 |
+| `run_precheck_before_submit` | bool | false | 제출 전 precheck 실행 |
+| `force` | bool | true | 확인 없이 진행 |
+
+### 심사 정보 (submission_information)
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `add_id_info_uses_idfa` | bool | false | IDFA 사용 여부 |
+| `export_compliance_uses_encryption` | bool | false | 암호화 사용 여부 |
+| `export_compliance_platform` | string | - | 암호화 플랫폼 |
+
+### 빌드 옵션 (build_app)
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `configuration` | string | "Release" | 빌드 구성 |
+| `export_method` | string | "app-store" | 내보내기 방식 |
+| `clean` | bool | true | 빌드 전 클린 |
+| `include_symbols` | bool | true | dSYM 포함 |
+| `include_bitcode` | bool | false | Bitcode 포함 (deprecated) |
+
+### TestFlight 옵션 (upload_to_testflight)
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `skip_waiting_for_build_processing` | bool | true | 빌드 처리 대기 건너뛰기 |
+| `distribute_external` | bool | false | 외부 테스터에게 배포 |
+| `groups` | array | - | 배포할 테스터 그룹 |
+| `changelog` | string | - | 테스터용 변경 로그 |
+
+---
+
+## 📁 생성되는 파일 구조
+
+```
+project/
+├── fastlane/
+│   ├── Appfile              # 앱 식별 정보
+│   ├── Fastfile             # 배포 레인 정의
+│   ├── ExportOptions.plist  # IPA 내보내기 옵션
+│   ├── metadata/            # (선택) 메타데이터
+│   │   ├── ko/
+│   │   │   ├── description.txt
+│   │   │   ├── keywords.txt
+│   │   │   └── release_notes.txt
+│   │   └── en-US/
+│   │       └── ...
+│   └── screenshots/         # (선택) 스크린샷
+│       ├── ko/
+│       └── en-US/
+└── .github/workflows/       # (선택) CI/CD
+    ├── ios-deploy.yml
+    └── ios-test.yml
+```
+
+---
+
+## 🚀 사용법
+
+### 초기 설정 (대화형 마법사)
+
+사용자 요청 예시:
+```
+"iOS 배포 설정해줘"
+"Fastlane 구축 도와줘"
+"App Store 배포 자동화하고 싶어"
+```
+
+Claude가 위 STEP 1~7을 순서대로 진행합니다.
 
 ### 배포 명령어
 
 ```bash
-# App Store 배포 (기본 릴리즈노트: "안정성을 개선하였어요")
+# TestFlight 배포
+fastlane beta
+
+# App Store 배포 (기본 릴리즈노트)
 fastlane release
 
 # App Store 배포 (커스텀 릴리즈노트)
 fastlane release notes:"새로운 기능이 추가되었어요!"
 
-# TestFlight 베타 배포
-fastlane beta
+# 메타데이터만 업로드
+fastlane upload_metadata
 
 # 빌드만 (업로드 없이)
 fastlane build_only
-
-# 메타데이터 다운로드 (App Store에서)
-fastlane sync_metadata
-
-# 메타데이터 업로드 (바이너리 없이)
-fastlane upload_metadata
 ```
 
-## 릴리즈노트 작성
+### 릴리즈노트 작성
 
-### 옵션 1: 기본값 (파라미터 없이)
+**옵션 1: 기본값**
 ```bash
 fastlane release
-# → "안정성을 개선하였어요." (한국어)
-# → "Improved stability and performance." (영어)
+# → "안정성을 개선하였어요."
 ```
 
-### 옵션 2: 직접 지정
+**옵션 2: 직접 지정**
 ```bash
-fastlane release notes:"새로운 AI 플래너 기능이 추가되었어요!"
+fastlane release notes:"AI 플래너 기능 추가!"
 ```
 
-### 옵션 3: 파일로 작성 (다국어 지원)
-
-`fastlane/release_notes.txt` 파일 생성:
+**옵션 3: 파일 사용**
 ```
+# fastlane/release_notes.txt
 [ko]
 새로운 기능이 추가되었어요!
-- AI 플래너 기능
-- 복습 알림 개선
+- AI 플래너
 
 [en-US]
 New features added!
-- AI Planner feature
-- Improved review notifications
+- AI Planner
 ```
 
-배포 후 파일은 자동 삭제됩니다.
-
-### 옵션 4: AI가 자동 생성 (Claude Code 연동)
-
-Claude Code에서 배포 요청 시:
+**옵션 4: Claude AI 자동 생성**
 ```
-"최근 커밋 내용을 분석해서 사용자 친화적인 릴리즈노트를 작성하고 배포해줘"
+"최근 커밋 분석해서 릴리즈노트 만들고 배포해줘"
 ```
 
-Claude가 다음을 수행:
-1. `git log`로 최근 변경사항 분석
-2. 사용자 관점의 릴리즈노트 작성
-3. `fastlane/release_notes.txt`에 저장
-4. `fastlane release` 실행
+---
 
-### 수동 설정 (선택)
+## 📌 버전 형식
 
-1. **템플릿 복사**
-   ```bash
-   cp ~/rele/skills/ios-fastlane-deploy/assets/Fastfile.template ./fastlane/Fastfile
-   cp ~/rele/skills/ios-fastlane-deploy/assets/Appfile.template ./fastlane/Appfile
-   cp ~/rele/skills/ios-fastlane-deploy/assets/ExportOptions.plist ./fastlane/
-   ```
+### ChatGPT 스타일 (기본값)
+```
+MAJOR.YEAR.MMDDNNN
+예: 1.2025.1129001 (2025년 11월 29일 첫 번째 빌드)
+    1.2025.1129002 (같은 날 두 번째 빌드)
+```
 
-2. **설정 수정**
-   - `Appfile`: Bundle ID, Apple ID, Team ID 입력
-   - `Fastfile`: PROJECT, SCHEME, MAJOR_VERSION 수정
+### Semantic Versioning
+```
+MAJOR.MINOR.PATCH
+예: 1.0.0 → 1.0.1 → 1.1.0 → 2.0.0
+```
 
-3. **API 키 설정**
-   - App Store Connect → Users and Access → Keys
-   - .p8 파일 다운로드 → `fastlane/AuthKey_XXXXX.p8`
-   - Fastfile에 key_id, issuer_id 입력
+---
 
-## 선행 조건
-
-### 필수
-- Xcode 설치
-- Fastlane 설치 (`gem install fastlane`)
-- Apple Developer 계정
-- App Store Connect API 키 (권장)
-
-### 권장
-- Git 저장소 (변경사항 추적)
-- Automatic Signing 설정
-
-## 문제 해결
+## ⚠️ 문제 해결
 
 ### API 키 인증 오류
 ```
@@ -181,115 +403,29 @@ undefined method 'app_store_connect_api_key'
 ```
 → `app_store_connect_api_key`는 **Fastfile**에서만 사용 (Appfile ❌)
 
-### 빌드 실패
-```bash
-# 의존성 업데이트
-xcodebuild -resolvePackageDependencies
-
-# DerivedData 삭제
-rm -rf ~/Library/Developer/Xcode/DerivedData
-```
-
-### 버전 충돌
-```
-This build already exists
-```
-→ 같은 빌드 번호로 재업로드 시 발생. 자동 버전 관리 사용 시 발생하지 않음.
-
 ### IAP Precheck 오류
 ```
 Precheck cannot check In-app purchases with API Key
 ```
-→ API 키로는 IAP 검증이 불가능. `run_precheck_before_submit: false` 옵션으로 해결됨 (템플릿에 기본 적용).
+→ `run_precheck_before_submit: false` 설정 필요
 
 ### 편집 가능한 버전 없음
 ```
-Could not find an editable version for 'com.app.bundle'
+Could not find an editable version
 ```
-→ 이전 버전이 심사 중이거나, 새 버전이 아직 생성되지 않음:
-1. App Store Connect에서 이전 심사 취소
-2. 바이너리 업로드 후 수동으로 심사 제출
-3. `submit_for_review: false`로 변경 후 수동 제출
+→ 이전 버전이 심사 중. `submit_for_review: false`로 변경 후 수동 제출
 
 ### 위젯 미포함
 ```bash
-# IPA 확인
 unzip -l ./build/App.ipa | grep -i widget
 ```
-→ scheme에 위젯 Extension이 포함되어 있는지 확인
+→ Scheme에 위젯 Extension이 포함되어 있는지 확인
 
-## 검증
+---
 
-배포 전 검증 스크립트 실행:
-```bash
-./scripts/validate.sh /path/to/project ProjectName
-```
-
-## GitHub Actions CI/CD
-
-### 워크플로우 설정
-
-```bash
-# 템플릿 복사
-mkdir -p .github/workflows
-cp ~/rele/ios-fastlane-deploy/assets/.github/workflows/*.yml .github/workflows/
-```
-
-### 워크플로우 종류
-
-| 파일 | 용도 | 트리거 |
-|------|------|--------|
-| `ios-deploy.yml` | App Store/TestFlight 배포 | 수동, 태그 푸시 |
-| `ios-test.yml` | 빌드 & 테스트 | PR, 메인 브랜치 푸시 |
-
-### GitHub Secrets 설정
-
-Repository → Settings → Secrets and variables → Actions에서 설정:
-
-| Secret 이름 | 설명 | 예시 |
-|------------|------|------|
-| `APP_STORE_CONNECT_API_KEY_ID` | API Key ID | `XXXXXXXXXX` |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `APP_STORE_CONNECT_API_KEY_BASE64` | .p8 파일 Base64 인코딩 | (아래 명령어 참고) |
-
-```bash
-# .p8 파일을 Base64로 인코딩
-base64 -i AuthKey_XXXXXX.p8 | pbcopy
-# 클립보드에 복사됨 → GitHub Secret에 붙여넣기
-```
-
-### 배포 방법
-
-#### 1. 수동 배포 (Actions 탭에서)
-1. Actions → iOS Deploy → Run workflow
-2. 배포 타입 선택 (beta/release)
-3. 릴리즈노트 입력 (선택)
-
-#### 2. 태그로 자동 배포
-```bash
-# TestFlight 배포
-git tag beta-1.0.0
-git push origin beta-1.0.0
-
-# App Store 배포
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-### 워크플로우 커스터마이징
-
-`.github/workflows/ios-deploy.yml` 수정:
-
-```yaml
-env:
-  XCODE_PROJECT: "YourApp.xcodeproj"  # 프로젝트 파일명
-  SCHEME: "YourApp"                    # 빌드 Scheme
-  BUNDLE_ID: "com.yourcompany.app"     # Bundle ID
-```
-
-## 참고 자료
+## 🔗 참고 자료
 
 - [Fastlane 공식 문서](https://docs.fastlane.tools)
 - [App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi)
-- [Xcode 빌드 가이드](https://developer.apple.com/documentation/xcode)
-- [GitHub Actions for iOS](https://docs.github.com/en/actions/deployment/deploying-xcode-applications)
+- [deliver 옵션](https://docs.fastlane.tools/actions/deliver/)
+- [pilot 옵션](https://docs.fastlane.tools/actions/pilot/)

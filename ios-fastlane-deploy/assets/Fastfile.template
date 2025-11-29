@@ -1,47 +1,61 @@
 # Fastfile Template for iOS App Store Deployment
-# 버전 형식: MAJOR.YEAR.MMDDNNN (ChatGPT 스타일)
+# 버전: 2.0.0 - 대화형 마법사 지원
 #
-# 사용법:
-#   1. 이 파일을 프로젝트의 fastlane/Fastfile로 복사
-#   2. PROJECT, SCHEME, MAJOR_VERSION 수정
-#   3. API 키 정보 입력 (key_id, issuer_id, key_filepath)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 이 파일은 Claude Code의 대화형 마법사에서 자동 생성됩니다.
+# 수동 설정 시 아래 가이드를 참고하세요.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #
 # 명령어:
-#   fastlane release                    - App Store 배포 (기본 릴리즈노트)
-#   fastlane release notes:"커스텀 노트" - App Store 배포 (커스텀 릴리즈노트)
+#   fastlane release                    - App Store 배포
+#   fastlane release notes:"릴리즈노트" - App Store 배포 (커스텀 노트)
 #   fastlane beta                       - TestFlight 배포
 #   fastlane build_only                 - 빌드만
+#   fastlane sync_metadata              - 메타데이터 다운로드
+#   fastlane upload_metadata            - 메타데이터 업로드
 #
 # 옵션:
 #   skip_commit:true  - 버전 변경 커밋 건너뛰기 (CI 환경에서 유용)
-#
-# 릴리즈노트 옵션:
-#   1. 파라미터 없음: 기본값 사용 ("안정성을 개선하였어요")
-#   2. notes:"텍스트": 직접 지정
-#   3. fastlane/release_notes.txt 파일이 있으면 해당 내용 사용
 
 default_platform(:ios)
 
 platform :ios do
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # 🔧 프로젝트 설정 (수정 필요)
+  # 🔧 프로젝트 설정 (자동 생성됨)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PROJECT = "YourApp.xcodeproj"     # Xcode 프로젝트 파일명
-  SCHEME = "YourApp"                 # 빌드 Scheme 이름
-  BUNDLE_ID = "com.yourcompany.app"  # Bundle Identifier
-  MAJOR_VERSION = "1"                # 메이저 버전 (큰 변경 시 수동 증가)
+  PROJECT = "{{PROJECT_NAME}}.xcodeproj"
+  SCHEME = "{{SCHEME_NAME}}"
+  BUNDLE_ID = "{{BUNDLE_ID}}"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 📦 배포 설정 (대화형 마법사에서 선택)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # 버전 관리: "chatgpt" | "semver" | "manual"
+  VERSION_STYLE = "{{VERSION_STYLE}}"
+  MAJOR_VERSION = "{{MAJOR_VERSION}}"
+
+  # 메타데이터 관리: true = App Store Connect에서 관리, false = Fastlane에서 관리
+  SKIP_METADATA = {{SKIP_METADATA}}
+  SKIP_SCREENSHOTS = {{SKIP_SCREENSHOTS}}
+
+  # 심사/릴리즈 옵션
+  SUBMIT_FOR_REVIEW = {{SUBMIT_FOR_REVIEW}}
+  AUTOMATIC_RELEASE = {{AUTOMATIC_RELEASE}}
+
+  # 심사 정보
+  USES_IDFA = {{USES_IDFA}}
+
+  # 고급 옵션
+  AUTO_COMMIT_VERSION = {{AUTO_COMMIT_VERSION}}
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🔐 App Store Connect API 키 설정
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # 공용 키 위치: ~/.appstore_keys/
-  # 프로젝트별 키가 필요하면 fastlane/AuthKey_*.p8 사용
-
   GLOBAL_CONFIG_DIR = File.expand_path("~/.appstore_keys")
   GLOBAL_CONFIG_PATH = "#{GLOBAL_CONFIG_DIR}/config.json"
 
-  # 공용 설정 로드
   def load_global_config
     if File.exist?(GLOBAL_CONFIG_PATH)
       require 'json'
@@ -51,7 +65,6 @@ platform :ios do
     end
   end
 
-  # API 키 경로 결정 (프로젝트 로컬 → 공용 위치)
   def find_api_key_path(config)
     local_key = Dir.glob("fastlane/AuthKey_*.p8").first
     return local_key if local_key
@@ -64,7 +77,6 @@ platform :ios do
     nil
   end
 
-  # 설정 검증 및 에러 표시
   def validate_api_config!
     config = load_global_config
     key_path = find_api_key_path(config)
@@ -76,41 +88,17 @@ platform :ios do
       puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       puts ""
       puts "📁 설정 방법:"
-      puts ""
-      puts "1. 디렉토리 생성:"
       puts "   mkdir -p ~/.appstore_keys"
+      puts "   # API 키 파일(.p8)을 복사하고 config.json 생성"
       puts ""
-      puts "2. API 키 파일 복사 (.p8 파일):"
-      puts "   cp /path/to/AuthKey_XXXXXX.p8 ~/.appstore_keys/"
-      puts ""
-      puts "3. config.json 생성:"
-      puts "   cat > ~/.appstore_keys/config.json << 'EOF'"
-      puts '   {'
-      puts '     "default": {'
-      puts '       "key_id": "YOUR_KEY_ID",'
-      puts '       "issuer_id": "YOUR_ISSUER_ID",'
-      puts '       "key_file": "AuthKey_XXXXXX.p8"'
-      puts '     },'
-      puts '     "apple_id": "your-email@example.com",'
-      puts '     "team_id": "XXXXXXXXXX"'
-      puts '   }'
-      puts "   EOF"
-      puts ""
-      puts "📌 API 키 발급 방법:"
-      puts "   1. https://appstoreconnect.apple.com 접속"
-      puts "   2. Users and Access → Keys → App Store Connect API"
-      puts "   3. + 버튼으로 새 키 생성 (Admin 권한)"
-      puts "   4. Key ID, Issuer ID 복사"
-      puts "   5. .p8 파일 다운로드"
-      puts ""
+      puts "📌 자세한 내용은 ios-fastlane-deploy SKILL.md 참고"
       puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      UI.user_error!("API 키 설정이 필요합니다. 위 가이드를 참고하세요.")
+      UI.user_error!("API 키 설정이 필요합니다.")
     end
 
     { config: config, key_path: key_path }
   end
 
-  # 설정 검증
   API_CONFIG = validate_api_config!
   GLOBAL_CONFIG = API_CONFIG[:config]
 
@@ -121,10 +109,12 @@ platform :ios do
   )
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # 📌 버전 자동 생성 (ChatGPT 스타일: MAJOR.YEAR.MMDDNNN)
+  # 📌 버전 자동 생성
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  desc "자동 버전 생성"
-  private_lane :generate_version do
+
+  # ChatGPT 스타일: MAJOR.YEAR.MMDDNNN
+  desc "ChatGPT 스타일 버전 생성"
+  private_lane :generate_chatgpt_version do
     now = Time.now
     year = now.strftime("%Y")
     mmdd = now.strftime("%m%d")
@@ -147,6 +137,39 @@ platform :ios do
     new_build = "#{year}#{mmdd}#{serial}"
 
     { version: new_version, build: new_build }
+  end
+
+  # Semantic Versioning: MAJOR.MINOR.PATCH
+  desc "SemVer 스타일 버전 생성 (패치 자동 증가)"
+  private_lane :generate_semver_version do
+    current_version = get_version_number(
+      xcodeproj: PROJECT,
+      target: SCHEME
+    )
+
+    parts = current_version.split(".")
+    major = parts[0] || MAJOR_VERSION
+    minor = parts[1] || "0"
+    patch = (parts[2] || "0").to_i + 1
+
+    new_version = "#{major}.#{minor}.#{patch}"
+    new_build = Time.now.strftime("%Y%m%d%H%M")
+
+    { version: new_version, build: new_build }
+  end
+
+  desc "버전 생성 (스타일에 따라)"
+  private_lane :generate_version do
+    case VERSION_STYLE
+    when "chatgpt"
+      generate_chatgpt_version
+    when "semver"
+      generate_semver_version
+    else
+      # manual - 현재 버전 유지, 빌드 번호만 증가
+      current_version = get_version_number(xcodeproj: PROJECT, target: SCHEME)
+      { version: current_version, build: Time.now.strftime("%Y%m%d%H%M") }
+    end
   end
 
   desc "버전 업데이트 적용"
@@ -174,26 +197,23 @@ platform :ios do
     version = options[:version]
     skip_commit = options[:skip_commit] || false
 
-    # CI 환경이거나 skip_commit 옵션이 있으면 건너뛰기
-    if skip_commit || ENV['CI'] == 'true'
-      puts "⏭️  버전 커밋 건너뜀 (CI 환경 또는 skip_commit 옵션)"
+    # 자동 커밋 비활성화 또는 CI 환경이면 건너뛰기
+    if !AUTO_COMMIT_VERSION || skip_commit || ENV['CI'] == 'true'
+      puts "⏭️  버전 커밋 건너뜀"
       next
     end
 
-    # Git 저장소인지 확인
     unless File.directory?(".git")
       puts "⚠️  Git 저장소가 아닙니다. 커밋 건너뜀."
       next
     end
 
-    # 변경된 파일 확인
     changed_files = sh("git diff --name-only", log: false).strip
     if changed_files.empty?
       puts "ℹ️  변경된 파일 없음"
       next
     end
 
-    # project.pbxproj 파일만 커밋 (버전 변경)
     project_file = "#{PROJECT}/project.pbxproj"
     if changed_files.include?("project.pbxproj")
       git_add(path: project_file)
@@ -209,23 +229,17 @@ platform :ios do
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 📝 릴리즈노트 생성
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # 우선순위:
-  #   1. 파라미터로 전달된 notes
-  #   2. fastlane/release_notes.txt 파일
-  #   3. 기본값
   desc "릴리즈노트 가져오기"
   private_lane :get_release_notes do |options|
     custom_notes = options[:notes]
     notes_file = "fastlane/release_notes.txt"
 
-    # 기본 릴리즈노트
     default_notes = {
       "en-US" => "Improved stability and performance.",
       "ko" => "안정성을 개선하였어요."
     }
 
     if custom_notes && !custom_notes.empty?
-      # 1. 파라미터로 전달된 노트 사용
       puts "📝 릴리즈노트: 커스텀 (파라미터)"
       {
         "default" => custom_notes,
@@ -233,16 +247,9 @@ platform :ios do
         "ko" => custom_notes
       }
     elsif File.exist?(notes_file)
-      # 2. 파일에서 읽기
       content = File.read(notes_file).strip
       puts "📝 릴리즈노트: 파일 (#{notes_file})"
 
-      # 파일 형식 파싱 (언어별 구분 지원)
-      # 형식:
-      # [ko]
-      # 한국어 노트
-      # [en-US]
-      # English notes
       if content.include?("[ko]") || content.include?("[en-US]")
         notes = { "default" => "" }
         current_lang = "default"
@@ -260,7 +267,6 @@ platform :ios do
         notes["default"] = notes["ko"] || notes["en-US"] || content
         notes
       else
-        # 단일 언어 (한국어로 간주)
         {
           "default" => content,
           "en-US" => content,
@@ -268,7 +274,6 @@ platform :ios do
         }
       end
     else
-      # 3. 기본값 사용
       puts "📝 릴리즈노트: 기본값"
       {
         "default" => default_notes["ko"],
@@ -286,8 +291,8 @@ platform :ios do
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🚀 App Store 배포
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  desc "App Store 배포 (심사 제출 포함)"
-  desc "사용법: fastlane release [notes:'릴리즈노트']"
+  desc "App Store 배포"
+  desc "사용법: fastlane release [notes:'릴리즈노트'] [skip_commit:true]"
   lane :release do |options|
     version_info = generate_version
     apply_version(version_info: version_info)
@@ -295,14 +300,16 @@ platform :ios do
     version = version_info[:version]
     build_number = version_info[:build]
 
-    # 릴리즈노트 가져오기
     release_notes = get_release_notes(notes: options[:notes])
 
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "📦 App Store 배포 시작"
     puts "   버전: #{version}"
     puts "   빌드: #{build_number}"
-    puts "   릴리즈노트 (ko): #{release_notes['ko']&.slice(0, 50)}..."
+    puts "   메타데이터: #{SKIP_METADATA ? '건너뜀' : '업로드'}"
+    puts "   스크린샷: #{SKIP_SCREENSHOTS ? '건너뜀' : '업로드'}"
+    puts "   심사 제출: #{SUBMIT_FOR_REVIEW ? '자동' : '수동'}"
+    puts "   자동 릴리즈: #{AUTOMATIC_RELEASE ? '예' : '아니오'}"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     build_app(
@@ -321,15 +328,15 @@ platform :ios do
 
     upload_to_app_store(
       api_key: API_KEY,
-      skip_metadata: false,
-      skip_screenshots: false,
+      skip_metadata: SKIP_METADATA,
+      skip_screenshots: SKIP_SCREENSHOTS,
       skip_binary_upload: false,
       force: true,
-      submit_for_review: true,
-      automatic_release: true,
-      run_precheck_before_submit: false,  # IAP 앱에서 precheck 오류 방지
+      submit_for_review: SUBMIT_FOR_REVIEW,
+      automatic_release: AUTOMATIC_RELEASE,
+      run_precheck_before_submit: false,
       submission_information: {
-        add_id_info_uses_idfa: false
+        add_id_info_uses_idfa: USES_IDFA
       },
       release_notes: release_notes
     )
@@ -337,17 +344,20 @@ platform :ios do
     puts "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "✅ App Store 배포 완료!"
     puts "   버전: #{version} (#{build_number})"
-    puts "   상태: 심사 대기 중"
+    if SUBMIT_FOR_REVIEW
+      puts "   상태: 심사 대기 중"
+    else
+      puts "   상태: App Store Connect에서 심사 제출 필요"
+    end
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # 릴리즈노트 파일 정리 (사용 후 삭제)
+    # 릴리즈노트 파일 정리
     notes_file = "fastlane/release_notes.txt"
     if File.exist?(notes_file)
       File.delete(notes_file)
       puts "🗑️  릴리즈노트 파일 삭제됨"
     end
 
-    # 버전 변경 자동 커밋
     commit_version(version: version, skip_commit: options[:skip_commit])
   end
 
@@ -355,7 +365,7 @@ platform :ios do
   # 🧪 TestFlight 베타 배포
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   desc "TestFlight 베타 배포"
-  desc "사용법: fastlane beta [skip_commit:true]"
+  desc "사용법: fastlane beta [skip_commit:true] [changelog:'변경사항']"
   lane :beta do |options|
     version_info = generate_version
     apply_version(version_info: version_info)
@@ -363,7 +373,11 @@ platform :ios do
     version = version_info[:version]
     build_number = version_info[:build]
 
-    puts "🧪 TestFlight 배포: #{version} (#{build_number})"
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts "🧪 TestFlight 배포 시작"
+    puts "   버전: #{version}"
+    puts "   빌드: #{build_number}"
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     build_app(
       scheme: SCHEME,
@@ -379,12 +393,15 @@ platform :ios do
 
     upload_to_testflight(
       api_key: API_KEY,
-      skip_waiting_for_build_processing: true
+      skip_waiting_for_build_processing: true,
+      changelog: options[:changelog]
     )
 
+    puts "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "✅ TestFlight 업로드 완료!"
+    puts "   버전: #{version} (#{build_number})"
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # 버전 변경 자동 커밋
     commit_version(version: version, skip_commit: options[:skip_commit])
   end
 
@@ -392,16 +409,13 @@ platform :ios do
   # 📥 메타데이터 동기화
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   desc "App Store Connect에서 메타데이터 다운로드"
-  desc "사용법: fastlane sync_metadata"
   lane :sync_metadata do
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "📥 메타데이터 동기화 시작"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # 공용 API 키 경로 (deliver용 JSON 형식)
     global_api_key_json = "#{GLOBAL_CONFIG_DIR}/api_key.json"
 
-    # deliver init으로 메타데이터 + 스크린샷 모두 다운로드
     puts "\n📝 메타데이터 & 스크린샷 다운로드 중..."
     sh("fastlane deliver init --app_identifier '#{BUNDLE_ID}' --api_key_path '#{global_api_key_json}' --use_live_version true")
 
@@ -412,8 +426,7 @@ platform :ios do
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   end
 
-  desc "메타데이터를 App Store Connect에 업로드 (바이너리 없이)"
-  desc "사용법: fastlane upload_metadata"
+  desc "메타데이터를 App Store Connect에 업로드"
   lane :upload_metadata do
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     puts "📤 메타데이터 업로드 시작"
@@ -422,7 +435,7 @@ platform :ios do
     upload_to_app_store(
       api_key: API_KEY,
       skip_binary_upload: true,
-      skip_screenshots: false,
+      skip_screenshots: SKIP_SCREENSHOTS,
       skip_metadata: false,
       force: true
     )
@@ -435,8 +448,7 @@ platform :ios do
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🔨 빌드만 (업로드 없이)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  desc "빌드만 수행 (업로드 없이)"
-  desc "사용법: fastlane build_only"
+  desc "빌드만 수행"
   lane :build_only do
     version_info = generate_version
     apply_version(version_info: version_info)
