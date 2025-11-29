@@ -1,24 +1,6 @@
 ---
 name: ios-fastlane-deploy
-description: iOS 앱을 Fastlane으로 자동 빌드하고 App Store/TestFlight에 배포합니다. 대화형 마법사로 단계별 설정을 지원합니다.
-version: 2.0.0
-author: YouK Chan Sim
-license: MIT
-allowed-tools:
-  - Bash
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
-  - AskUserQuestion
-tags:
-  - ios
-  - fastlane
-  - deployment
-  - automation
-  - app-store
-  - testflight
+description: Automates iOS app builds and deploys to App Store/TestFlight using Fastlane. Use when setting up iOS deployment, configuring Fastlane, or automating App Store releases. Provides interactive wizard for step-by-step configuration of metadata, versioning, review submission, and CI/CD options.
 ---
 
 # iOS Fastlane 배포 Skill
