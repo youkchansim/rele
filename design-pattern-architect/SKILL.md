@@ -16,12 +16,7 @@ This skill systematically analyzes requirements, identifies design problems, and
 - **Simplicity over complexity** - avoid over-engineering
 - **Pattern-less design is valid** - not every problem needs a pattern
 
-**Language Convention**:
-- All design documents: Written in **English**
-- All output/communication to user: **Match input language**
-  - Korean input (한글) → Korean output
-  - English input → English output
-  - Other languages → Respond in same language
+**Language Convention**: Respond in the user's input language.
 
 **Language-Agnostic Approach**:
 - Patterns are **concepts**, not language-specific implementations

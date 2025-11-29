@@ -5,25 +5,22 @@ description: Analyzes projects and creates optimized CLAUDE.md structures with @
 
 # CLAUDE.md Manager
 
-## Overview
+Creates and manages optimized CLAUDE.md structures for any project.
 
-This skill creates and manages optimized CLAUDE.md structures for any project. It analyzes the project's tech stack, existing documentation, and patterns to dynamically generate the most efficient documentation structure.
+**Language Convention**: Respond in the user's input language.
 
-**Core Philosophy**:
+## Core Philosophy
+
 - **No fixed templates** - Generate based on actual project analysis
 - **@ import for efficiency** - Minimize always-loaded content
-- **Reuse existing docs** - Link to existing documentation instead of duplicating
-- **Project-specific** - Each project gets tailored structure
-
-**Language Convention**:
-- Documentation files: **English** (for token efficiency and Claude parsing)
-- Output to user: **Match input language**
+- **Reuse existing docs** - Link instead of duplicating
+- **Project-specific** - Tailored structure for each project
 
 ## Commands
 
 ### 1. Initialize (`init`)
 
-**Trigger**: "CLAUDE.md 초기화", "CLAUDE.md init", "setup CLAUDE.md"
+**Triggers**: "CLAUDE.md init", "setup CLAUDE.md", "create CLAUDE.md"
 
 **Process**:
 1. Scan project structure
@@ -34,7 +31,7 @@ This skill creates and manages optimized CLAUDE.md structures for any project. I
 
 ### 2. Analyze (`analyze`)
 
-**Trigger**: "CLAUDE.md 분석", "CLAUDE.md analyze", "check CLAUDE.md"
+**Triggers**: "CLAUDE.md analyze", "check CLAUDE.md"
 
 **Process**:
 1. Read existing CLAUDE.md
@@ -45,7 +42,7 @@ This skill creates and manages optimized CLAUDE.md structures for any project. I
 
 ### 3. Optimize (`optimize`)
 
-**Trigger**: "CLAUDE.md 최적화", "CLAUDE.md optimize"
+**Triggers**: "CLAUDE.md optimize"
 
 **Process**:
 1. Analyze current structure
@@ -55,7 +52,7 @@ This skill creates and manages optimized CLAUDE.md structures for any project. I
 
 ### 4. Add Document (`add`)
 
-**Trigger**: "문서 추가", "add doc [type]"
+**Triggers**: "add doc [type]"
 
 **Process**:
 1. Determine document type needed
@@ -66,8 +63,6 @@ This skill creates and manages optimized CLAUDE.md structures for any project. I
 ## Analysis Phase
 
 ### Step 1: Project Scanning
-
-Detect and analyze:
 
 ```
 Project Root
@@ -80,56 +75,46 @@ Project Root
 │
 ├── Build Tools Detection
 │   ├── iOS: fastlane/, Tuist/, xcodegen
-│   ├── Android: fastlane/, gradle
 │   ├── Web: webpack, vite, turbo
 │   └── CI/CD: .github/workflows/, .gitlab-ci.yml
 │
 ├── Existing Documentation
-│   ├── README.md
-│   ├── DESIGN_GUIDELINES.md, DESIGN_SYSTEM.md
+│   ├── README.md, DESIGN_GUIDELINES.md
 │   ├── ARCHITECTURE.md, docs/
-│   ├── CONTRIBUTING.md
 │   └── Any .md files in project root
 │
 └── Code Patterns
     ├── Architecture: TCA, MVVM, Clean, MVC
-    ├── Design System: Asset catalogs, theme files
-    └── Testing: test directories, test configs
+    └── Design System: Asset catalogs, theme files
 ```
 
 ### Step 2: Document Category Mapping
 
-Based on analysis, determine needed documents:
-
 | Category | When to Create | Content Source |
 |----------|---------------|----------------|
-| `coding-standards` | Always | Analyze code patterns, existing guidelines |
-| `architecture` | Complex projects | Detect patterns, existing docs |
+| `coding-standards` | Always | Code patterns, existing guidelines |
+| `architecture` | Complex projects | Detected patterns, existing docs |
 | `commands` | Build tools found | Extract from configs |
-| `deployment` | CI/CD or fastlane found | Analyze workflow files |
-| `design-system` | Design files found | Link to existing or generate |
-| `testing` | Test dirs found | Analyze test patterns |
-| `api` | Backend/API project | Analyze endpoints |
+| `deployment` | CI/CD or fastlane found | Workflow files |
+| `design-system` | Design files found | Link existing or generate |
 
 ### Step 3: Reuse vs Create Decision
 
 ```
 For each document category:
 ├── Existing doc found?
-│   ├── Yes → @ import existing file directly
-│   └── No → Generate new doc in .claude/docs/
+│   ├── Yes → @ import existing file
+│   └── No → Generate in .claude/docs/
 │
 └── Quality check:
-    ├── Existing doc comprehensive? → Use as-is
+    ├── Comprehensive? → Use as-is
     ├── Needs enhancement? → Create wrapper with @ import
-    └── Outdated/poor? → Generate new, suggest migration
+    └── Outdated? → Generate new, suggest migration
 ```
 
 ## Generation Phase
 
 ### CLAUDE.md Structure
-
-Always generate in this format:
 
 ```markdown
 # {ProjectName}
@@ -140,46 +125,33 @@ Always generate in this format:
 
 @.claude/docs/coding-standards.md
 @.claude/docs/architecture.md
-@.claude/docs/commands.md
 @{path/to/existing/doc.md}
 
 ## Critical Rules
 
-- {Only absolutely critical rules that must always apply}
-- {Maximum 3-5 rules}
+- {Maximum 3-5 critical rules}
 ```
 
-### Document Generation Guidelines
+### Document Guidelines
 
-**coding-standards.md**:
-- Language/framework specific conventions
-- Project-specific patterns (from code analysis)
-- Do's and Don'ts with examples
-- Link to design system if exists
+**coding-standards.md**: Language conventions, project patterns, do's/don'ts
 
-**architecture.md**:
-- Layer structure
-- Key patterns used
-- Data flow
-- Key files and their purposes
+**architecture.md**: Layer structure, key patterns, data flow
 
-**commands.md**:
-- Build commands
-- Test commands
-- Lint commands
-- Deployment commands (if no separate deployment.md)
+**commands.md**: Build, test, lint, deployment commands
 
-**deployment.md**:
-- CI/CD workflows
-- Manual deployment steps
-- Environment setup
-- Required secrets/credentials
+**deployment.md**: CI/CD workflows, environment setup
 
-## Optimization Metrics
+## Token Efficiency
 
-### Token Efficiency Score
+### Target Metrics
 
-Calculate and report:
+| Component | Target | Max |
+|-----------|--------|-----|
+| Main CLAUDE.md | ~300 tokens | 500 tokens |
+| Per @ doc | ~500-1000 tokens | 2000 tokens |
+
+### Efficiency Score
 
 ```
 Main CLAUDE.md size:
@@ -191,37 +163,21 @@ Main CLAUDE.md size:
 - All detailed docs use @ import: ✅
 - Some inline content: ⚠️ Review needed
 - No @ imports: ❌ Needs restructuring
-
-Content distribution:
-- Critical rules only in main: ✅
-- Detailed examples in main: ⚠️ Move to docs
-- Full guides in main: ❌ Must modularize
 ```
-
-### Optimization Recommendations
-
-Always check for:
-- Duplicate content across files
-- Overly detailed main CLAUDE.md
-- Missing @ imports for large sections
-- Outdated or unused documentation
-- Inconsistent structure
 
 ## Reference Files
 
-Load these references as needed during analysis and generation:
+Load these as needed:
 
 - **`references/analysis-checklist.md`**: Load when analyzing projects
-  - Tech stack detection patterns (iOS, Android, Web, Backend)
+  - Tech stack detection patterns
   - Build tools and CI/CD detection
-  - Documentation quality assessment criteria
-  - Code pattern detection (architecture, design system)
+  - Documentation quality assessment
 
 - **`references/best-practices.md`**: Load when generating or optimizing
   - @ import syntax rules and limitations
   - Token optimization strategies
   - Directory structure conventions
-  - Quality checklist
 
 ## Output Format
 
@@ -238,7 +194,6 @@ Load these references as needed during analysis and generation:
 
 1. CLAUDE.md (X lines, ~Y tokens)
 2. .claude/docs/coding-standards.md
-3. .claude/docs/architecture.md
 ...
 
 ## Summary
@@ -260,12 +215,10 @@ Load these references as needed during analysis and generation:
 ## Recommendations
 
 1. {specific recommendation}
-2. {specific recommendation}
 ...
 
 ## Quick Fixes
 
 - Move {section} to separate doc
 - Add @ import for {file}
-...
 ```
