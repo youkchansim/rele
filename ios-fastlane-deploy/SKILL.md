@@ -196,6 +196,21 @@ This build already exists
 ```
 → 같은 빌드 번호로 재업로드 시 발생. 자동 버전 관리 사용 시 발생하지 않음.
 
+### IAP Precheck 오류
+```
+Precheck cannot check In-app purchases with API Key
+```
+→ API 키로는 IAP 검증이 불가능. `run_precheck_before_submit: false` 옵션으로 해결됨 (템플릿에 기본 적용).
+
+### 편집 가능한 버전 없음
+```
+Could not find an editable version for 'com.app.bundle'
+```
+→ 이전 버전이 심사 중이거나, 새 버전이 아직 생성되지 않음:
+1. App Store Connect에서 이전 심사 취소
+2. 바이너리 업로드 후 수동으로 심사 제출
+3. `submit_for_review: false`로 변경 후 수동 제출
+
 ### 위젯 미포함
 ```bash
 # IPA 확인
