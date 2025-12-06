@@ -1,5 +1,5 @@
 # Fastfile Template for iOS App Store Deployment
-# 버전: 2.0.0 - 대화형 마법사 지원
+# 버전: 2.1.0 - .env 지원 및 버전 커밋 개선
 #
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 이 파일은 Claude Code의 대화형 마법사에서 자동 생성됩니다.
@@ -16,6 +16,14 @@
 #
 # 옵션:
 #   skip_commit:true  - 버전 변경 커밋 건너뛰기 (CI 환경에서 유용)
+
+# .env 파일 로드 (있으면)
+begin
+  require 'dotenv'
+  Dotenv.load
+rescue LoadError
+  # dotenv gem이 없으면 무시
+end
 
 default_platform(:ios)
 
@@ -47,15 +55,16 @@ platform :ios do
   # 심사 정보
   USES_IDFA = {{USES_IDFA}}
 
-  # 고급 옵션
-  AUTO_COMMIT_VERSION = {{AUTO_COMMIT_VERSION}}
-
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 🔐 App Store Connect API 키 설정
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # API 키 관리 방식: "global" | "env"
+  API_KEY_MODE = "{{API_KEY_MODE}}"
+
   GLOBAL_CONFIG_DIR = File.expand_path("~/.appstore_keys")
   GLOBAL_CONFIG_PATH = "#{GLOBAL_CONFIG_DIR}/config.json"
 
+  # 전역 config.json 로드
   def load_global_config
     if File.exist?(GLOBAL_CONFIG_PATH)
       require 'json'
@@ -65,11 +74,37 @@ platform :ios do
     end
   end
 
-  def find_api_key_path(config)
+  # .env에서 API 키 정보 로드
+  def load_env_config
+    key_id = ENV['APP_STORE_KEY_ID']
+    issuer_id = ENV['APP_STORE_ISSUER_ID']
+    key_file = ENV['APP_STORE_KEY_FILE']
+
+    if key_id && issuer_id && key_file
+      {
+        "key_id" => key_id,
+        "issuer_id" => issuer_id,
+        "key_file" => key_file
+      }
+    else
+      nil
+    end
+  end
+
+  # API 키 파일 경로 찾기
+  def find_api_key_path(config, mode)
+    # 1. 로컬 fastlane 디렉토리 확인
     local_key = Dir.glob("fastlane/AuthKey_*.p8").first
     return local_key if local_key
 
-    if config && config.dig("default", "key_file")
+    # 2. .env 모드: 환경변수에서 경로 가져오기
+    if mode == "env" && config && config["key_file"]
+      env_key = File.expand_path(config["key_file"])
+      return env_key if File.exist?(env_key)
+    end
+
+    # 3. 전역 폴더 모드: ~/.appstore_keys/에서 찾기
+    if mode == "global" && config && config.dig("default", "key_file")
       global_key = "#{GLOBAL_CONFIG_DIR}/#{config.dig("default", "key_file")}"
       return global_key if File.exist?(global_key)
     end
@@ -77,9 +112,24 @@ platform :ios do
     nil
   end
 
+  # API 설정 검증
   def validate_api_config!
-    config = load_global_config
-    key_path = find_api_key_path(config)
+    env_config = load_env_config
+    global_config = load_global_config
+
+    # .env 우선, 없으면 전역 설정 사용
+    if env_config
+      config = env_config
+      mode = "env"
+    elsif global_config
+      config = global_config
+      mode = "global"
+    else
+      config = nil
+      mode = nil
+    end
+
+    key_path = find_api_key_path(config, mode)
 
     if config.nil? || key_path.nil?
       puts ""
@@ -87,25 +137,33 @@ platform :ios do
       puts "❌ App Store Connect API 키가 설정되지 않았습니다!"
       puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       puts ""
-      puts "📁 설정 방법:"
+      puts "📁 방법 1: 전역 폴더 (~/.appstore_keys/)"
       puts "   mkdir -p ~/.appstore_keys"
-      puts "   # API 키 파일(.p8)을 복사하고 config.json 생성"
+      puts "   # AuthKey_XXXXXX.p8 복사 후 config.json 생성"
+      puts ""
+      puts "📁 방법 2: 프로젝트 .env 파일"
+      puts "   cp .env.template .env"
+      puts "   # .env 파일에 API 키 정보 입력"
       puts ""
       puts "📌 자세한 내용은 ios-fastlane-deploy SKILL.md 참고"
       puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       UI.user_error!("API 키 설정이 필요합니다.")
     end
 
-    { config: config, key_path: key_path }
+    puts "🔑 API 키 모드: #{mode == 'env' ? '.env 파일' : '전역 폴더'}"
+    { config: config, key_path: key_path, mode: mode }
   end
 
   API_CONFIG = validate_api_config!
-  GLOBAL_CONFIG = API_CONFIG[:config]
+  LOADED_CONFIG = API_CONFIG[:config]
+  API_KEY_PATH = API_CONFIG[:key_path]
+  DETECTED_MODE = API_CONFIG[:mode]
 
+  # API 키 생성 (모드에 따라 다르게 처리)
   API_KEY = app_store_connect_api_key(
-    key_id: GLOBAL_CONFIG.dig("default", "key_id"),
-    issuer_id: GLOBAL_CONFIG.dig("default", "issuer_id"),
-    key_filepath: API_CONFIG[:key_path]
+    key_id: DETECTED_MODE == "env" ? LOADED_CONFIG["key_id"] : LOADED_CONFIG.dig("default", "key_id"),
+    issuer_id: DETECTED_MODE == "env" ? LOADED_CONFIG["issuer_id"] : LOADED_CONFIG.dig("default", "issuer_id"),
+    key_filepath: API_KEY_PATH
   )
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -190,16 +248,36 @@ platform :ios do
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # 📝 버전 변경 자동 커밋
+  # 📝 버전 변경 자동 커밋 (배포 성공 후)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  desc "버전 변경 사항을 Git에 커밋"
-  private_lane :commit_version do |options|
+  # 버전 커밋 모드: "always" | "local_only" | "never"
+  VERSION_COMMIT_MODE = "{{VERSION_COMMIT_MODE}}"
+
+  desc "버전 변경 사항을 Git에 커밋 및 푸시"
+  private_lane :commit_version_after_deploy do |options|
     version = options[:version]
+    build_number = options[:build_number]
+    deploy_type = options[:deploy_type] || "release"
     skip_commit = options[:skip_commit] || false
 
-    # 자동 커밋 비활성화 또는 CI 환경이면 건너뛰기
-    if !AUTO_COMMIT_VERSION || skip_commit || ENV['CI'] == 'true'
-      puts "⏭️  버전 커밋 건너뜀"
+    puts ""
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    puts "📝 버전 커밋 처리 중..."
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # 커밋 스킵 조건 확인
+    if skip_commit
+      puts "⏭️  skip_commit 옵션으로 건너뜀"
+      next
+    end
+
+    if VERSION_COMMIT_MODE == "never"
+      puts "⏭️  VERSION_COMMIT_MODE=never로 건너뜀"
+      next
+    end
+
+    if VERSION_COMMIT_MODE == "local_only" && ENV['CI'] == 'true'
+      puts "⏭️  CI 환경에서는 건너뜀 (local_only 모드)"
       next
     end
 
@@ -208,22 +286,65 @@ platform :ios do
       next
     end
 
+    # 변경된 파일 확인
     changed_files = sh("git diff --name-only", log: false).strip
-    if changed_files.empty?
+    staged_files = sh("git diff --cached --name-only", log: false).strip
+    all_changes = "#{changed_files}\n#{staged_files}".strip
+
+    if all_changes.empty?
       puts "ℹ️  변경된 파일 없음"
       next
     end
 
+    # 프로젝트 파일 커밋
     project_file = "#{PROJECT}/project.pbxproj"
-    if changed_files.include?("project.pbxproj")
+
+    if all_changes.include?("project.pbxproj")
+      # 스테이징
       git_add(path: project_file)
+
+      # 커밋 메시지 생성
+      commit_message = "chore(release): bump version to #{version} (#{build_number})\n\n- Deploy type: #{deploy_type}\n- Build: #{build_number}"
+
       git_commit(
         path: project_file,
-        message: "chore: bump version to #{version}",
+        message: commit_message,
         allow_nothing_to_commit: true
       )
-      puts "✅ 버전 변경 커밋 완료: #{version}"
+
+      puts "✅ 버전 변경 커밋 완료"
+      puts "   버전: #{version}"
+      puts "   빌드: #{build_number}"
+
+      # 태그 생성 (App Store 배포 시)
+      if deploy_type == "release"
+        tag_name = "v#{version}"
+        begin
+          add_git_tag(tag: tag_name)
+          puts "🏷️  태그 생성: #{tag_name}"
+        rescue => e
+          puts "⚠️  태그 생성 실패 (이미 존재할 수 있음): #{e.message}"
+        end
+      end
+
+      # 원격 저장소로 푸시 (CI가 아닌 경우)
+      if ENV['CI'] != 'true' && VERSION_COMMIT_MODE == "always"
+        begin
+          push_to_git_remote(
+            remote: "origin",
+            tags: deploy_type == "release"
+          )
+          puts "🚀 원격 저장소에 푸시 완료"
+        rescue => e
+          puts "⚠️  푸시 실패: #{e.message}"
+          puts "   수동으로 푸시해주세요: git push && git push --tags"
+        end
+      end
+    else
+      puts "ℹ️  project.pbxproj 변경 없음"
     end
+
+    puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -358,7 +479,13 @@ platform :ios do
       puts "🗑️  릴리즈노트 파일 삭제됨"
     end
 
-    commit_version(version: version, skip_commit: options[:skip_commit])
+    # 배포 성공 후 버전 커밋 & 푸시
+    commit_version_after_deploy(
+      version: version,
+      build_number: build_number,
+      deploy_type: "release",
+      skip_commit: options[:skip_commit]
+    )
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -402,7 +529,13 @@ platform :ios do
     puts "   버전: #{version} (#{build_number})"
     puts "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    commit_version(version: version, skip_commit: options[:skip_commit])
+    # 배포 성공 후 버전 커밋 (태그 없이)
+    commit_version_after_deploy(
+      version: version,
+      build_number: build_number,
+      deploy_type: "beta",
+      skip_commit: options[:skip_commit]
+    )
   end
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,0 +1,28 @@
+{
+  "_comment": "App Store Connect API 키 설정",
+  "_usage": [
+    "1. 이 파일을 ~/.appstore_keys/config.json 으로 복사",
+    "2. AuthKey_XXXXXX.p8 파일을 ~/.appstore_keys/ 에 복사",
+    "3. 아래 값들을 실제 값으로 변경"
+  ],
+  "_docs": "https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api",
+
+  "default": {
+    "key_id": "YOUR_KEY_ID",
+    "issuer_id": "YOUR_ISSUER_ID",
+    "key_file": "AuthKey_XXXXXX.p8"
+  },
+
+  "_multi_app_example": {
+    "myapp1": {
+      "key_id": "KEY_ID_FOR_APP1",
+      "issuer_id": "ISSUER_ID_FOR_APP1",
+      "key_file": "AuthKey_APP1.p8"
+    },
+    "myapp2": {
+      "key_id": "KEY_ID_FOR_APP2",
+      "issuer_id": "ISSUER_ID_FOR_APP2",
+      "key_file": "AuthKey_APP2.p8"
+    }
+  }
+}
