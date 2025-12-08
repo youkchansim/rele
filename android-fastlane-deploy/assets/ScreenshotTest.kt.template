@@ -1,0 +1,88 @@
+package {{PACKAGE_NAME}}.screenshot
+
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import {{PACKAGE_NAME}}.MainActivity
+import org.junit.ClassRule
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import tools.fastlane.screengrab.Screengrab
+import tools.fastlane.screengrab.UiAutomatorScreenshotStrategy
+import tools.fastlane.screengrab.locale.LocaleTestRule
+
+/**
+ * App Store Screenshot Automation Test
+ *
+ * Captures screenshots for each tab in multiple locales.
+ *
+ * Usage:
+ *   fastlane screenshots
+ *
+ * Or manually:
+ *   ./gradlew assembleScreenshotDebug assembleScreenshotDebugAndroidTest
+ *   fastlane screengrab
+ */
+@RunWith(AndroidJUnit4::class)
+class ScreenshotTest {
+
+    companion object {
+        @get:ClassRule
+        @JvmStatic
+        val localeTestRule = LocaleTestRule()
+    }
+
+    @get:Rule
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Test
+    fun captureScreenshots() {
+        // Initialize Screengrab
+        Screengrab.setDefaultScreenshotStrategy(UiAutomatorScreenshotStrategy())
+
+        // Wait for app to fully load
+        composeTestRule.waitForIdle()
+        Thread.sleep(3000)
+
+        // 1. Home tab (default selected)
+        Screengrab.screenshot("01_home")
+
+        // Wait for Compose to stabilize
+        Thread.sleep(1000)
+        composeTestRule.waitForIdle()
+
+        // 2. Navigate to Tab 2
+        // Update these text values to match your app's tab labels
+        clickOnTabWithTexts("Tab 2 English", "탭 2 한국어")
+        composeTestRule.waitForIdle()
+        Thread.sleep(2000)
+        Screengrab.screenshot("02_tab2")
+
+        // 3. Navigate to Tab 3
+        Thread.sleep(1000)
+        composeTestRule.waitForIdle()
+        clickOnTabWithTexts("Tab 3 English", "탭 3 한국어")
+        composeTestRule.waitForIdle()
+        Thread.sleep(2000)
+        Screengrab.screenshot("03_tab3")
+    }
+
+    private fun clickOnTabWithTexts(vararg texts: String) {
+        composeTestRule.waitForIdle()
+        for (text in texts) {
+            try {
+                composeTestRule.onNodeWithText(text, useUnmergedTree = true)
+                    .performClick()
+                composeTestRule.waitForIdle()
+                return
+            } catch (e: AssertionError) {
+                // Try next text if this one not found
+            }
+        }
+        // If none found, try first text and let it fail with proper error
+        composeTestRule.onNodeWithText(texts.first(), useUnmergedTree = true)
+            .performClick()
+    }
+}

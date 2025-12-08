@@ -1,0 +1,140 @@
+# Android Screenshots Workflow
+# Captures app store screenshots on manual trigger
+#
+# Note: This workflow uses macOS runner for hardware acceleration
+# Screenshots are uploaded as artifacts and can be used for Play Store
+
+name: Android Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      locales:
+        description: 'Locales to capture'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ko-KR
+          - en-US
+
+env:
+  JAVA_VERSION: '17'
+  RUBY_VERSION: '3.2'
+
+jobs:
+  screenshots:
+    name: Capture Screenshots
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Install ImageMagick
+        run: brew install imagemagick
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-34-${{ github.event.inputs.locales }}
+
+      - name: Build screenshot APKs
+        run: |
+          ./gradlew assembleScreenshotDebug assembleScreenshotDebugAndroidTest
+
+      - name: Capture Korean screenshots
+        if: ${{ github.event.inputs.locales == 'all' || github.event.inputs.locales == 'ko-KR' }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            # Set Korean locale
+            adb shell "settings put system system_locales ko-KR"
+            adb shell "setprop persist.sys.locale ko-KR"
+
+            # Reinstall app
+            adb install -r app/build/outputs/apk/screenshot/debug/app-screenshot-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/screenshot/debug/app-screenshot-debug-androidTest.apk
+
+            # Capture screenshots
+            adb shell am instrument -w -e class com.rele.releplanner.screenshot.ScreenshotTest com.rele.releplanner.test/androidx.test.runner.AndroidJUnitRunner
+
+            # Pull screenshots
+            mkdir -p fastlane/screenshots/ko-KR/images/phoneScreenshots
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/ko-KR/images/screenshots/01_home.png" > fastlane/screenshots/ko-KR/images/phoneScreenshots/01_home.png
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/ko-KR/images/screenshots/02_timetable.png" > fastlane/screenshots/ko-KR/images/phoneScreenshots/02_timetable.png
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/ko-KR/images/screenshots/03_profile.png" > fastlane/screenshots/ko-KR/images/phoneScreenshots/03_profile.png
+
+      - name: Capture English screenshots
+        if: ${{ github.event.inputs.locales == 'all' || github.event.inputs.locales == 'en-US' }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            # Set English locale
+            adb shell "settings put system system_locales en-US"
+            adb shell "setprop persist.sys.locale en-US"
+
+            # Reinstall app
+            adb install -r app/build/outputs/apk/screenshot/debug/app-screenshot-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/screenshot/debug/app-screenshot-debug-androidTest.apk
+
+            # Capture screenshots
+            adb shell am instrument -w -e class com.rele.releplanner.screenshot.ScreenshotTest com.rele.releplanner.test/androidx.test.runner.AndroidJUnitRunner
+
+            # Pull screenshots
+            mkdir -p fastlane/screenshots/en-US/images/phoneScreenshots
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/en-US/images/screenshots/01_home.png" > fastlane/screenshots/en-US/images/phoneScreenshots/01_home.png
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/en-US/images/screenshots/02_timetable.png" > fastlane/screenshots/en-US/images/phoneScreenshots/02_timetable.png
+            adb shell "run-as com.rele.releplanner cat /data/data/com.rele.releplanner/app_screengrab/en-US/images/screenshots/03_profile.png" > fastlane/screenshots/en-US/images/phoneScreenshots/03_profile.png
+
+      - name: Apply frames
+        run: |
+          bash fastlane/screenshots/add_titles.sh
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-screenshots
+          path: |
+            fastlane/screenshots/ko-KR/images/framed/
+            fastlane/screenshots/en-US/images/framed/
+          retention-days: 30
