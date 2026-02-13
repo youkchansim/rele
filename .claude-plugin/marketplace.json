@@ -14,6 +14,11 @@
       "name": "design-pattern-architect",
       "description": "디자인 패턴 분석 및 추천 (과잉 설계 방지, 설계→구현→리뷰 워크플로우)",
       "source": "./design-pattern-architect"
+    },
+    {
+      "name": "android-fastlane-deploy",
+      "description": "Android 앱 자동 배포 (Google Play, 스크린샷 자동화, 버전 관리)",
+      "source": "./android-fastlane-deploy"
     }
   ]
 }
