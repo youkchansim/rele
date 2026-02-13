@@ -54,24 +54,34 @@ grep -r "applicationId" app/build.gradle*
 
 | Option | Description |
 |--------|-------------|
-| Global shared folder | Store in `~/.google_play_keys/` (recommended for multi-project) |
-| Project file | Use `fastlane/play-store-credentials.json` |
+| Global shared folder | Store in `~/.playstore_keys/` with `config.json` (recommended for multi-project) |
+| Project file | Use `fastlane/play-store-credentials.json` (CI/CD auto-detected) |
 | Existing setup | Already configured, skip |
 
 **If Global shared folder selected:**
-- Check if `~/.google_play_keys/api-key.json` exists
+- Check if `~/.playstore_keys/config.json` exists
 - If not, show setup guide:
   ```bash
-  mkdir -p ~/.google_play_keys
-  # Download JSON from Google Cloud Console
-  # Save as ~/.google_play_keys/api-key.json
+  mkdir -p ~/.playstore_keys
+  # Copy Service Account JSON key
+  cp /path/to/service-account.json ~/.playstore_keys/
+  # Create config.json pointing to the key file
+  cat > ~/.playstore_keys/config.json << 'EOF'
+  {
+    "json_key_file": "service-account.json"
+  }
+  EOF
   ```
+
+**Key lookup order** (in Fastfile):
+1. Project local: `fastlane/*.json` (for CI/CD where secrets are written to file)
+2. Global: `~/.playstore_keys/{config.json → json_key_file}`
 
 **Setup Guide:**
 1. Go to Google Play Console → Setup → API access
 2. Create or link Google Cloud project
 3. Create Service Account with "Release Manager" role
-4. Download JSON key file
+4. Download JSON key file and save as `service-account.json`
 
 ### Step 3: Deploy Target
 
@@ -200,8 +210,9 @@ project/
 
 **API Key Setup Files** (if global folder selected):
 ```
-~/.google_play_keys/
-└── api-key.json               # Service account key
+~/.playstore_keys/
+├── config.json                # {"json_key_file": "service-account.json"}
+└── service-account.json       # Google Play Service Account key
 ```
 
 ## Commands

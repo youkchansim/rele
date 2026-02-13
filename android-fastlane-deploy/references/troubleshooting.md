@@ -123,7 +123,7 @@ android {
 1. Check service account permissions in Google Cloud Console
 2. Verify JSON key file is valid:
    ```bash
-   cat ~/.google_play_keys/api-key.json | jq .client_email
+   cat ~/.playstore_keys/service-account.json | jq .client_email
    ```
 
 3. Ensure service account has "Release Manager" role in Play Console
