@@ -33,6 +33,9 @@ git commit -m "Add ios-fastlane-deploy skill"
 | Skill | 설명 |
 |-------|------|
 | [ios-fastlane-deploy](./ios-fastlane-deploy) | iOS 앱 자동 배포 (App Store, TestFlight) |
+| [android-fastlane-deploy](./android-fastlane-deploy) | Android 앱 자동 배포 (Google Play) |
+| [ios-android-bridge](./ios-android-bridge) | iOS → Android 코드 변환 (@Observable→ViewModel, SwiftUI→Compose, SwiftData→Room, TCA→StateFlow) |
+| [product-analytics-architect](./product-analytics-architect) | 분석 이벤트 설계 및 코드 생성 (Firebase + Amplitude) |
 | [design-pattern-architect](./design-pattern-architect) | 디자인 패턴 분석 및 추천 (과잉 설계 방지) |
 | [claude-md-manager](./claude-md-manager) | CLAUDE.md 최적화 및 관리 (@ import 구조) |
 
