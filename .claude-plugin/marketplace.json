@@ -24,6 +24,11 @@
       "name": "product-analytics-architect",
       "description": "Analytics event design and code generation for product growth",
       "source": "./product-analytics-architect"
+    },
+    {
+      "name": "product-team",
+      "description": "Virtual product team (PO A/B, Designer, iOS Developer, Data Analyst, Marketer) sub-agent collaboration plugin",
+      "source": "./product-team"
     }
   ]
 }
