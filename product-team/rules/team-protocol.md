@@ -72,3 +72,18 @@ PO B ──→ data-analyst, marketer, app-designer, ios-developer
 3. **No PO↔PO**: No PO↔PO calls. Use /po-debate command for PO discussions
 4. **Single call**: No repeated calls to the same agent
 5. **Cost awareness**: Prefer delegating to sonnet agents (analyst, marketer) first
+
+## Pipeline Protocol
+
+### `/product-pipeline` Flow
+```
+Debate → Hypothesis → Review → Design → Monitoring Plan
+         GATE 1 ↑           GATE 2 ↑
+```
+
+### Gate Rules
+- **Gate 1** (after debate): "don't pursue" consensus → pipeline stops
+- **Gate 2** (after review): No-Go / Conditional Hold → pipeline stops with decision document
+
+### Context Forwarding
+Each phase passes its results to the next. Agents should NOT re-gather data that was already analyzed in earlier phases.
