@@ -21,12 +21,12 @@ The full virtual product team collaborates to plan a sprint.
 3. Create Phase 1-2 tasks:
 
 ```
-Task 1: "PO-A 데이터 기반 기회 분석" — assign to PO-A (병렬)
-Task 2: "PO-B 사용자/시장 관점" — assign to PO-B (병렬)
-Task 3: "Analyst 사용자 행동 분석" — assign to Analyst (병렬)
-Task 4: "PO-A 상대 기회목록 평가" — assign to PO-A (blockedBy: [1,2,3])
-Task 5: "PO-B 상대 기회목록 평가" — assign to PO-B (blockedBy: [1,2,3])
-Task 6: "Lead 합의 + 우선순위 결정" — Lead handles (blockedBy: [4,5])
+Task 1: "PO-A Data-driven Opportunity Analysis" — assign to PO-A (parallel)
+Task 2: "PO-B User/Market Perspective" — assign to PO-B (parallel)
+Task 3: "Analyst User Behavior Analysis" — assign to Analyst (parallel)
+Task 4: "PO-A Cross-evaluate Opportunity List" — assign to PO-A (blockedBy: [1,2,3])
+Task 5: "PO-B Cross-evaluate Opportunity List" — assign to PO-B (blockedBy: [1,2,3])
+Task 6: "Lead Consensus + Priority Decision" — Lead handles (blockedBy: [4,5])
 ```
 
 Tasks 7-11 are created progressively as later Phases begin.
@@ -94,9 +94,9 @@ After Task 6 completes:
 2. Create Phase 3 tasks:
 
 ```
-Task 7: "Designer UI/UX 설계" — assign to Designer (blockedBy: [6])
-Task 8: "Developer 구현 검토" — assign to Developer (blockedBy: [6])
-Task 9: "Analyst 측정 계획" — assign to Analyst (blockedBy: [6])
+Task 7: "Designer UI/UX Design" — assign to Designer (blockedBy: [6])
+Task 8: "Developer Implementation Review" — assign to Developer (blockedBy: [6])
+Task 9: "Analyst Measurement Plan" — assign to Analyst (blockedBy: [6])
 ```
 
 ### To Designer (included in spawn prompt + SendMessage):
@@ -136,7 +136,7 @@ After Tasks 7-9 complete:
 2. Create Phase 4 task:
 
 ```
-Task 10: "Marketer 성장 전략" — assign to Marketer (blockedBy: [7,8,9])
+Task 10: "Marketer Growth Strategy" — assign to Marketer (blockedBy: [7,8,9])
 ```
 
 ### To Marketer (included in spawn prompt + SendMessage):
@@ -155,7 +155,7 @@ Task 10: "Marketer 성장 전략" — assign to Marketer (blockedBy: [7,8,9])
 After Task 10 completes, Lead compiles the sprint document:
 
 ```
-Task 11: "Lead 스프린트 문서 컴파일" — Lead handles (blockedBy: [10])
+Task 11: "Lead Sprint Document Compile" — Lead handles (blockedBy: [10])
 ```
 
 Follow the sprint-planning skill structure:

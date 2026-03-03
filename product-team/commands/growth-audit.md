@@ -21,12 +21,12 @@ PO A (Data), Data Analyst, and Marketer collaborate to diagnose current metrics 
 3. Create all tasks:
 
 ```
-Task 1: "PO-A 비즈니스 메트릭 수집" — assign to PO-A (병렬)
-Task 2: "Analyst 사용자 행동 분석" — assign to Analyst (병렬)
-Task 3: "Marketer 외부 환경 분석" — assign to Marketer (병렬)
-Task 4: "Lead AARRR 퍼널 진단 종합" — Lead handles (blockedBy: [1, 2, 3])
-Task 5: "PO-A ICE 스코어 기반 기회 우선순위화" — assign to PO-A (blockedBy: [4])
-Task 6: "Lead 액션 플랜 + 최종 문서" — Lead handles (blockedBy: [5])
+Task 1: "PO-A Business Metrics Collection" — assign to PO-A (parallel)
+Task 2: "Analyst User Behavior Analysis" — assign to Analyst (parallel)
+Task 3: "Marketer External Environment Analysis" — assign to Marketer (parallel)
+Task 4: "Lead AARRR Funnel Diagnosis Synthesis" — Lead handles (blockedBy: [1, 2, 3])
+Task 5: "PO-A ICE Score Opportunity Prioritization" — assign to PO-A (blockedBy: [4])
+Task 6: "Lead Action Plan + Final Document" — Lead handles (blockedBy: [5])
 ```
 
 ---

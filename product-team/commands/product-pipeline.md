@@ -20,11 +20,11 @@ End-to-end pipeline: Debate -> Hypothesis -> Review -> Design -> Monitoring Plan
 3. Create Phase 1 tasks only (Lazy Task Creation — next Phase tasks created after Gate passage):
 
 ```
-Task 1: "PO-A Round 1 초기 입장" — assign to PO-A (병렬)
-Task 2: "PO-B Round 1 초기 입장" — assign to PO-B (병렬)
-Task 3: "PO-A Round 2 교차 비판" — assign to PO-A (blockedBy: [1,2])
-Task 4: "PO-B Round 2 교차 비판" — assign to PO-B (blockedBy: [1,2])
-Task 5: "Lead Round 3 합의 + Gate 1 평가" — Lead handles (blockedBy: [3,4])
+Task 1: "PO-A Round 1 Initial Position" — assign to PO-A (parallel)
+Task 2: "PO-B Round 1 Initial Position" — assign to PO-B (parallel)
+Task 3: "PO-A Round 2 Cross-Critique" — assign to PO-A (blockedBy: [1,2])
+Task 4: "PO-B Round 2 Cross-Critique" — assign to PO-B (blockedBy: [1,2])
+Task 5: "Lead Round 3 Consensus + Gate 1 Evaluation" — Lead handles (blockedBy: [3,4])
 ```
 
 ---
@@ -95,9 +95,9 @@ When Tasks 3-4 complete, Lead synthesizes consensus.
 After Gate 1 passage, create Phase 2 tasks:
 
 ```
-Task 6: "PO-A 가설 구조화" — assign to PO-A (blockedBy: [5])
-Task 7: "PO-B 사용자 관점 보완" — assign to PO-B (blockedBy: [5])
-Task 8: "Lead 가설 통합" — Lead handles (blockedBy: [6,7])
+Task 6: "PO-A Hypothesis Structuring" — assign to PO-A (blockedBy: [5])
+Task 7: "PO-B User Perspective Complement" — assign to PO-B (blockedBy: [5])
+Task 8: "Lead Hypothesis Integration" — Lead handles (blockedBy: [6,7])
 ```
 
 Also spawn Analyst (needed for measurement plan):
@@ -131,7 +131,7 @@ Integrate PO A and PO B perspectives into unified hypothesis with ICE score and 
 
 Create measurement task:
 ```
-Task 9: "Analyst 측정 계획" — assign to Analyst (blockedBy: [8])
+Task 9: "Analyst Measurement Plan" — assign to Analyst (blockedBy: [8])
 ```
 
 **To Analyst (SendMessage):**
@@ -155,13 +155,13 @@ After Task 9 completes, spawn remaining 3 agents:
 
 Create review tasks:
 ```
-Task 10: "PO-A 비즈니스 리뷰" — assign to PO-A (blockedBy: [9])
-Task 11: "PO-B 사용자 리뷰" — assign to PO-B (blockedBy: [9])
-Task 12: "Designer UX 리뷰" — assign to Designer (blockedBy: [9])
-Task 13: "Developer 기술 리뷰" — assign to Developer (blockedBy: [9])
-Task 14: "Analyst 측정 리뷰" — assign to Analyst (blockedBy: [9])
-Task 15: "Marketer 성장 리뷰" — assign to Marketer (blockedBy: [9])
-Task 16: "Lead Scorecard + Gate 2 평가" — Lead handles (blockedBy: [10,11,12,13,14,15])
+Task 10: "PO-A Business Review" — assign to PO-A (blockedBy: [9])
+Task 11: "PO-B User Review" — assign to PO-B (blockedBy: [9])
+Task 12: "Designer UX Review" — assign to Designer (blockedBy: [9])
+Task 13: "Developer Technical Review" — assign to Developer (blockedBy: [9])
+Task 14: "Analyst Measurement Review" — assign to Analyst (blockedBy: [9])
+Task 15: "Marketer Growth Review" — assign to Marketer (blockedBy: [9])
+Task 16: "Lead Scorecard + Gate 2 Evaluation" — Lead handles (blockedBy: [10,11,12,13,14,15])
 ```
 
 ### 6-Perspective Parallel Review
@@ -203,9 +203,9 @@ Compile scorecard, then evaluate:
 
 Create Phase 4 tasks:
 ```
-Task 17: "Designer UI/UX 설계" — assign to Designer (blockedBy: [16])
-Task 18: "Developer 구현 계획" — assign to Developer (blockedBy: [16])
-Task 19: "Analyst 이벤트 배치 설계" — assign to Analyst (blockedBy: [16])
+Task 17: "Designer UI/UX Design" — assign to Designer (blockedBy: [16])
+Task 18: "Developer Implementation Plan" — assign to Developer (blockedBy: [16])
+Task 19: "Analyst Event Placement Design" — assign to Analyst (blockedBy: [16])
 ```
 
 ### Parallel Work
@@ -242,9 +242,9 @@ Task 19: "Analyst 이벤트 배치 설계" — assign to Analyst (blockedBy: [16
 
 After Tasks 17-19 complete, create monitoring tasks:
 ```
-Task 20: "PO-A 모니터링 기준 정의" — assign to PO-A (blockedBy: [17,18,19])
-Task 21: "Analyst 대시보드 설계" — assign to Analyst (blockedBy: [17,18,19])
-Task 22: "Lead 최종 문서 컴파일" — Lead handles (blockedBy: [20,21])
+Task 20: "PO-A Monitoring Criteria Definition" — assign to PO-A (blockedBy: [17,18,19])
+Task 21: "Analyst Dashboard Design" — assign to Analyst (blockedBy: [17,18,19])
+Task 22: "Lead Final Document Compile" — Lead handles (blockedBy: [20,21])
 ```
 
 **To PO-A (SendMessage):**

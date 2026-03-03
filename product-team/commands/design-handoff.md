@@ -19,7 +19,7 @@ Designer creates UI/UX, Developer verifies technical feasibility, Analyst integr
 3. Create initial tasks:
 
 ```
-Task 1: "Designer UI/UX 설계" — assign to Designer
+Task 1: "Designer UI/UX Design" — assign to Designer
 ```
 
 Tasks 2-4 are created after Task 1 completes (when Developer and Analyst are spawned).
@@ -57,9 +57,9 @@ After Task 1 completes:
 2. Create remaining tasks:
 
 ```
-Task 2: "Developer 기술 검증" — assign to Developer (blockedBy: [1])
-Task 3: "Analyst 이벤트 설계" — assign to Analyst (blockedBy: [1])
-Task 4: "Lead 핸드오프 문서 컴파일" — Lead handles (blockedBy: [2, 3])
+Task 2: "Developer Technical Verification" — assign to Developer (blockedBy: [1])
+Task 3: "Analyst Event Design" — assign to Analyst (blockedBy: [1])
+Task 4: "Lead Handoff Document Compile" — Lead handles (blockedBy: [2, 3])
 ```
 
 ### To Developer (included in spawn prompt + SendMessage):

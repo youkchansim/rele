@@ -20,11 +20,11 @@ PO A (Data-Driven) and PO B (Intuitive) conduct a 3-round structured debate to r
 3. Create all tasks with dependencies:
 
 ```
-Task 1: "PO-A Round 1 초기 입장 표명" — assign to PO-A
-Task 2: "PO-B Round 1 초기 입장 표명" — assign to PO-B
-Task 3: "PO-A Round 2 교차 비판" — assign to PO-A (blockedBy: [1, 2])
-Task 4: "PO-B Round 2 교차 비판" — assign to PO-B (blockedBy: [1, 2])
-Task 5: "Lead Round 3 합의 도출" — Lead handles (blockedBy: [3, 4])
+Task 1: "PO-A Round 1 Initial Position" — assign to PO-A
+Task 2: "PO-B Round 1 Initial Position" — assign to PO-B
+Task 3: "PO-A Round 2 Cross-Critique" — assign to PO-A (blockedBy: [1, 2])
+Task 4: "PO-B Round 2 Cross-Critique" — assign to PO-B (blockedBy: [1, 2])
+Task 5: "Lead Round 3 Consensus" — Lead handles (blockedBy: [3, 4])
 ```
 
 ---

@@ -24,13 +24,13 @@ All 6 virtual product team members review a feature from their expert perspectiv
 3. Create all tasks:
 
 ```
-Task 1: "PO-A 비즈니스 관점 리뷰" — assign to PO-A (병렬)
-Task 2: "PO-B 사용자 관점 리뷰" — assign to PO-B (병렬)
-Task 3: "Designer UX 관점 리뷰" — assign to Designer (병렬)
-Task 4: "Developer 기술 관점 리뷰" — assign to Developer (병렬)
-Task 5: "Analyst 측정 관점 리뷰" — assign to Analyst (병렬)
-Task 6: "Marketer 성장 관점 리뷰" — assign to Marketer (병렬)
-Task 7: "Lead Scorecard 집계 + Go/No-Go 판정" — Lead handles (blockedBy: [1,2,3,4,5,6])
+Task 1: "PO-A Business Perspective Review" — assign to PO-A (parallel)
+Task 2: "PO-B User Perspective Review" — assign to PO-B (parallel)
+Task 3: "Designer UX Perspective Review" — assign to Designer (parallel)
+Task 4: "Developer Technical Perspective Review" — assign to Developer (parallel)
+Task 5: "Analyst Measurement Perspective Review" — assign to Analyst (parallel)
+Task 6: "Marketer Growth Perspective Review" — assign to Marketer (parallel)
+Task 7: "Lead Scorecard Aggregation + Go/No-Go Decision" — Lead handles (blockedBy: [1,2,3,4,5,6])
 ```
 
 ---

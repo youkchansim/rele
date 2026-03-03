@@ -20,9 +20,9 @@ PO A (Data), PO B (Intuitive), and Data Analyst collaborate to structure an idea
 3. Create initial tasks:
 
 ```
-Task 1: "PO-A 데이터 기반 가설" — assign to PO-A (병렬)
-Task 2: "PO-B 사용자 관점 보완" — assign to PO-B (병렬)
-Task 3: "Lead 가설 통합" — Lead handles (blockedBy: [1, 2])
+Task 1: "PO-A Data-driven Hypothesis" — assign to PO-A (parallel)
+Task 2: "PO-B User Perspective Complement" — assign to PO-B (parallel)
+Task 3: "Lead Hypothesis Integration" — Lead handles (blockedBy: [1, 2])
 ```
 
 Tasks 4-5 are created after Task 3 completes (when Analyst is spawned).
@@ -86,8 +86,8 @@ After Task 3 completes:
 2. Create remaining tasks:
 
 ```
-Task 4: "Analyst 측정 계획" — assign to Analyst (blockedBy: [3])
-Task 5: "Lead 최종 검증 계획 컴파일" — Lead handles (blockedBy: [4])
+Task 4: "Analyst Measurement Plan" — assign to Analyst (blockedBy: [3])
+Task 5: "Lead Final Validation Plan Compile" — Lead handles (blockedBy: [4])
 ```
 
 ### To Analyst (included in spawn prompt + SendMessage):
