@@ -60,30 +60,46 @@ All team members check the following before starting work:
 | sprint-planning | O | O | O | O | O | O |
 | decision-log | O | O | O | O | O | O |
 
-## Agent Delegation Protocol
+## Agent Team Communication Protocol
 
-### Delegation Hierarchy (Unidirectional)
-PO A ──→ data-analyst, marketer, app-designer, ios-developer
-PO B ──→ data-analyst, marketer, app-designer, ios-developer
+### Team Structure
+- All commands create a team via TeamCreate and spawn teammates via Agent tool with `team_name`
+- Lead (Main Session) manages tasks, evaluates Gates, and compiles documents
+- Teammates work as independent instances, communicating via SendMessage
 
-### Rules
-1. **Depth = 1**: PO → Specialist only. Specialists cannot call other agents
-2. **Self-first**: If the PO can answer with its own MCP, handle it directly
-3. **No PO↔PO**: No PO↔PO calls. Use /po-debate command for PO discussions
-4. **Single call**: No repeated calls to the same agent
-5. **Cost awareness**: Prefer delegating to sonnet agents (analyst, marketer) first
+### Teammate Spawning Rules
+1. **Gate-based commands** (product-pipeline): Spawn teammates progressively per Phase (saves tokens)
+2. **Gate-free commands** (feature-review, growth-audit): Spawn all needed teammates at once
+3. **Reuse spawned teammates**: For already-spawned teammates, send new tasks via SendMessage instead of re-spawning
+4. **Context in prompt**: When spawning new teammates mid-pipeline, include previous Phase result summaries in the Agent prompt
+
+### Context Forwarding
+- **New teammate spawn**: Include previous Phase result summary in Agent `prompt` parameter
+- **Existing teammate**: Forward new Task + context via SendMessage
+- **Lead compiles**: After each Phase, Lead writes a structured summary extracting only key decisions, metrics, and rationale (not raw output)
+
+### Cleanup Protocol
+1. Send `shutdown_request` to all teammates via SendMessage
+2. Wait for `shutdown_response` confirmations
+3. Call TeamDelete to remove team and task directories
 
 ## Pipeline Protocol
 
 ### `/product-pipeline` Flow
 ```
-Debate → Hypothesis → Review → Design → Monitoring Plan
-         GATE 1 ↑           GATE 2 ↑
+Debate -> Hypothesis -> Review -> Design -> Monitoring Plan
+          GATE 1 ^            GATE 2 ^
 ```
 
 ### Gate Rules
-- **Gate 1** (after debate): "don't pursue" consensus → pipeline stops
-- **Gate 2** (after review): No-Go / Conditional Hold → pipeline stops with decision document
+- **Gate 1** (after debate): "don't pursue" consensus -> pipeline stops
+- **Gate 2** (after review): No-Go / Conditional Hold -> pipeline stops with decision document
 
-### Context Forwarding
-Each phase passes its results to the next. Agents should NOT re-gather data that was already analyzed in earlier phases.
+### Gate Early Termination
+When a Gate stops the pipeline:
+1. Save all results collected so far to the document
+2. Include clear stop reason and recommendations
+3. Run Cleanup Protocol (shutdown all teammates + TeamDelete)
+
+### Lazy Task Creation
+For gated commands (product-pipeline), only create tasks for the current Phase. Create next Phase tasks only after Gate passage is confirmed. This prevents wasted task setup for pipelines that stop early.

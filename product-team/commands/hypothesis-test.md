@@ -11,29 +11,49 @@ PO A (Data), PO B (Intuitive), and Data Analyst collaborate to structure an idea
 
 ---
 
+## Setup
+
+1. Create team: `TeamCreate("hypothesis-test")`
+2. Spawn PO agents **simultaneously** (Analyst spawns later in Phase 3):
+   - **PO-A** (product-team:po-data-driven, name: "PO-A")
+   - **PO-B** (product-team:po-intuitive, name: "PO-B")
+3. Create initial tasks:
+
+```
+Task 1: "PO-A 데이터 기반 가설" — assign to PO-A (병렬)
+Task 2: "PO-B 사용자 관점 보완" — assign to PO-B (병렬)
+Task 3: "Lead 가설 통합" — Lead handles (blockedBy: [1, 2])
+```
+
+Tasks 4-5 are created after Task 3 completes (when Analyst is spawned).
+
+---
+
 ## Phase 1: Hypothesis Structuring (Parallel)
 
-### PO A (Data)
+### To PO-A (SendMessage):
 > Structure the following idea into a data-based hypothesis: "$ARGUMENTS"
 > 1. Read project CLAUDE.md for current metrics
 > 2. Query related data (RevenueCat/Amplitude MCP)
 > 3. Hypothesis format: "If we [change], then [metric] will improve by [target], because [evidence]"
 > 4. Calculate ICE score
 > 5. Define clear success/failure criteria
+> Mark Task 1 as completed when done.
 
-### PO B (Intuitive)
+### To PO-B (SendMessage):
 > Complement the following idea from a user perspective: "$ARGUMENTS"
 > 1. Read project CLAUDE.md for target users
 > 2. Explore Reddit/HN for user reactions to similar features/ideas
 > 3. Assess the impact of this change on the user journey
 > 4. Find competitor attempts and their results
 > 5. Predict user reactions (positive/negative)
+> Mark Task 2 as completed when done.
 
 ---
 
-## Phase 2: Hypothesis Integration
+## Phase 2: Hypothesis Integration (Lead)
 
-Integrate PO A and PO B perspectives into a final hypothesis.
+When Task 1 and Task 2 complete, Lead integrates both perspectives (Task 3):
 
 ```markdown
 ## Hypothesis: [Title]
@@ -58,20 +78,33 @@ Because [evidence/mechanism].
 
 ---
 
-## Phase 3: Measurement Plan (Analyst)
+## Phase 3: Measurement Plan
 
-### Data Analyst
+After Task 3 completes:
+
+1. **Spawn Analyst**: (product-team:data-analyst, name: "Analyst") via Agent tool with `team_name: "hypothesis-test"`. Include Phase 2 hypothesis summary in the spawn prompt.
+2. Create remaining tasks:
+
+```
+Task 4: "Analyst 측정 계획" — assign to Analyst (blockedBy: [3])
+Task 5: "Lead 최종 검증 계획 컴파일" — Lead handles (blockedBy: [4])
+```
+
+### To Analyst (included in spawn prompt + SendMessage):
 > Create a measurement plan for the following hypothesis:
-> [Pass Phase 2 integrated hypothesis]
+> [Phase 2 integrated hypothesis]
 > 1. Design required events using 3-Question filter
 > 2. Decide A/B test vs Before-After approach
 > 3. Calculate sample size and validation duration
 > 4. Propose dashboard/alert configuration
 > 5. Check if existing events can be reused
+> Mark Task 4 as completed when done.
 
 ---
 
-## Phase 4: Final Hypothesis Validation Plan
+## Phase 4: Final Hypothesis Validation Plan (Lead)
+
+When Task 4 completes, Lead compiles the final document (Task 5):
 
 ```markdown
 # Hypothesis Validation Plan: [Title]
@@ -110,3 +143,11 @@ Because [evidence/mechanism].
 Save hypothesis validation plan to `docs/decisions/YYYY-MM-DD-hypothesis-{topic}.md`.
 
 Verify `docs/decisions/` directory exists before saving; create if needed.
+
+---
+
+## Cleanup
+
+1. Send `shutdown_request` to PO-A, PO-B, and Analyst via SendMessage
+2. Wait for `shutdown_response` confirmations
+3. Call `TeamDelete`

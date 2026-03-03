@@ -5,294 +5,269 @@ argument-hint: Feature idea (e.g., "AI schedule recommendation", "calendar shari
 
 # Feature Pipeline
 
-End-to-end pipeline: Debate → Hypothesis → Review → Design → Monitoring Plan
+End-to-end pipeline: Debate -> Hypothesis -> Review -> Design -> Monitoring Plan
 
 **Feature**: $ARGUMENTS
 
 ---
 
-## Phase 1: PO Debate (Direction)
+## Setup
 
-PO A (Data-Driven) and PO B (Intuitive) conduct a 3-round structured debate.
+1. Create team: `TeamCreate("product-pipeline")`
+2. Spawn Phase 1 agents only (progressive spawning — save tokens):
+   - **PO-A** (product-team:po-data-driven, name: "PO-A")
+   - **PO-B** (product-team:po-intuitive, name: "PO-B")
+3. Create Phase 1 tasks only (Lazy Task Creation — next Phase tasks created after Gate passage):
+
+```
+Task 1: "PO-A Round 1 초기 입장" — assign to PO-A (병렬)
+Task 2: "PO-B Round 1 초기 입장" — assign to PO-B (병렬)
+Task 3: "PO-A Round 2 교차 비판" — assign to PO-A (blockedBy: [1,2])
+Task 4: "PO-B Round 2 교차 비판" — assign to PO-B (blockedBy: [1,2])
+Task 5: "Lead Round 3 합의 + Gate 1 평가" — Lead handles (blockedBy: [3,4])
+```
+
+---
+
+## Phase 1: PO Debate (Direction)
 
 ### Round 1: Initial Positions (Parallel)
 
-Invoke PO A and PO B agents **in parallel**.
+Send to both POs simultaneously via SendMessage:
 
-**PO A Prompt**:
+**To PO-A:**
 > Analyze the following topic from a data perspective: "$ARGUMENTS"
 > 1. Read project CLAUDE.md for current metrics and North Star
 > 2. Query RevenueCat/Amplitude MCP for relevant metrics (when available)
 > 3. State your for/against position with ICE score and expected business impact
 > 4. Support your argument with specific data/numbers
+> Mark Task 1 as completed when done.
 
-**PO B Prompt**:
+**To PO-B:**
 > Analyze the following topic from a user/market perspective: "$ARGUMENTS"
 > 1. Read project CLAUDE.md for target users and core value
 > 2. Analyze related user reactions and competitor apps on Reddit/HN
 > 3. State your for/against position from user journey and UX value perspectives
 > 4. Support your argument with competitive analysis and community insights
+> Mark Task 2 as completed when done.
 
 ### Round 2: Cross-Critique
 
-Pass Round 1 results to each side and request rebuttals.
+When Tasks 1-2 complete, Lead forwards cross-results:
 
-**To PO A**: Pass PO B's position and request rebuttal
-> PO B's position: [Round 1 PO B result]
-> Critique this from a data perspective. Specify which of PO B's points you accept and which you rebut.
+**To PO-A (SendMessage):**
+> PO B's position: [Round 1 PO B result summary]
+> Critique from data perspective. Specify what you accept and rebut.
+> Mark Task 3 as completed when done.
 
-**To PO B**: Pass PO A's position and request rebuttal
-> PO A's position: [Round 1 PO A result]
-> Critique this from a user/market perspective. Specify which of PO A's points you accept and which you rebut.
+**To PO-B (SendMessage):**
+> PO A's position: [Round 1 PO A result summary]
+> Critique from user/market perspective. Specify what you accept and rebut.
+> Mark Task 4 as completed when done.
 
-### Round 3: Consensus
+### Round 3: Consensus + Gate 1 (Lead — Task 5)
 
-Synthesize all positions and rebuttals into a consensus.
+When Tasks 3-4 complete, Lead synthesizes consensus.
 
-**Consensus Rules**:
-1. **Data clear** -> Data wins
-2. **Data insufficient** -> MVP validation
-3. **Low risk** -> Try intuition
-4. **High risk** -> Conservative approach
+**Consensus Rules:**
+1. Data clear -> Data wins
+2. Data insufficient -> MVP validation
+3. Low risk -> Try intuition
+4. High risk -> Conservative approach
 
-**Direction Judgment**: Determine one of the following:
-- **pursue** — proceed to next phase
-- **don't pursue** — stop the pipeline
-- **needs more research** — treat as "pursue" but note research gaps
+**Direction Judgment**: pursue / don't pursue / needs more research
 
 ### GATE 1: Direction Check
 
-If direction = **"don't pursue"**:
-1. Save the debate result to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md` with a note that the pipeline was stopped at Gate 1
+**If "don't pursue":**
+1. Save debate result to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md` with Gate 1 stop note
 2. Output: `## Pipeline Complete — Stopped at Gate 1`
-3. Include the consensus summary and key arguments
-4. **STOP HERE. Do not proceed to Phase 2.**
+3. Include consensus summary and key arguments
+4. Run Cleanup (shutdown all + TeamDelete)
+5. **STOP HERE. Do not proceed.**
 
-If direction = **"pursue"** or **"needs more research"**: Continue to Phase 2.
+**If "pursue" or "needs more research":** Continue to Phase 2.
 
 ---
 
 ## Phase 2: Hypothesis Structuring
 
-Use the debate consensus from Phase 1 as context. Do NOT re-gather data already analyzed.
+After Gate 1 passage, create Phase 2 tasks:
+
+```
+Task 6: "PO-A 가설 구조화" — assign to PO-A (blockedBy: [5])
+Task 7: "PO-B 사용자 관점 보완" — assign to PO-B (blockedBy: [5])
+Task 8: "Lead 가설 통합" — Lead handles (blockedBy: [6,7])
+```
+
+Also spawn Analyst (needed for measurement plan):
+- **Analyst** (product-team:data-analyst, name: "Analyst") — include Phase 1 consensus in spawn prompt
 
 ### Step 1: Hypothesis Formation (Parallel)
 
-**PO A Prompt**:
+**To PO-A (SendMessage):**
 > Based on the debate consensus below, structure a testable hypothesis:
-> [Pass Phase 1 consensus result]
->
+> [Phase 1 consensus result summary]
 > 1. Hypothesis format: "If we [change], then [metric] will improve by [target], because [evidence]"
 > 2. Calculate ICE score using data from the debate
 > 3. Define clear success/failure criteria
-> 4. Do NOT re-analyze metrics already covered in the debate — build on existing findings
+> 4. Do NOT re-analyze metrics already covered — build on existing findings
+> Mark Task 6 as completed when done.
 
-**PO B Prompt**:
+**To PO-B (SendMessage):**
 > Based on the debate consensus below, complement the hypothesis from a user perspective:
-> [Pass Phase 1 consensus result]
->
+> [Phase 1 consensus result summary]
 > 1. Assess user journey impact based on debate findings
 > 2. Predict user reactions (positive/negative)
 > 3. Identify user segments most affected
-> 4. Do NOT re-analyze competitors already covered in the debate — add only new insights
+> 4. Do NOT re-analyze competitors already covered — add only new insights
+> Mark Task 7 as completed when done.
 
-### Step 2: Hypothesis Integration
+### Step 2: Hypothesis Integration (Lead — Task 8)
 
-Integrate PO A and PO B perspectives into a unified hypothesis:
+Integrate PO A and PO B perspectives into unified hypothesis with ICE score and success metrics.
 
+### Step 3: Measurement Plan
+
+Create measurement task:
 ```
-## Hypothesis: [Title]
-
-### Hypothesis Statement
-If we [change/action],
-then [target users]' [behavior/metric]
-will change by [direction + target amount].
-Because [evidence/mechanism].
-
-### ICE Score
-- Impact: ? (Evidence: ...)
-- Confidence: ? (Evidence: ...)
-- Ease: ? (Evidence: ...)
-- Total: I x C x E = ?
-
-### Success Metrics
-- Primary KPI: [Metric] — current -> target
-- Secondary KPI: [Supporting metric]
-- Guard Rail: [Metric that must not degrade]
+Task 9: "Analyst 측정 계획" — assign to Analyst (blockedBy: [8])
 ```
 
-### Step 3: Measurement Plan (Analyst)
-
-**Data Analyst Prompt**:
+**To Analyst (SendMessage):**
 > Create a measurement plan for the following hypothesis:
-> [Pass Step 2 integrated hypothesis]
->
+> [Task 8 integrated hypothesis]
 > 1. Design required events using 3-Question filter
 > 2. Decide A/B test vs Before-After approach
 > 3. Calculate sample size and validation duration
 > 4. Propose dashboard/alert configuration
 > 5. Check if existing events can be reused
+> Mark Task 9 as completed when done.
 
 ---
 
 ## Phase 3: Team Review + Go/No-Go
 
-All 6 team members review the feature using Phase 1-2 results as context.
+After Task 9 completes, spawn remaining 3 agents:
+- **Designer** (product-team:app-designer, name: "Designer") — include Phase 1-2 summary in spawn prompt
+- **Developer** (product-team:ios-developer, name: "Developer") — include Phase 1-2 summary in spawn prompt
+- **Marketer** (product-team:marketer, name: "Marketer") — include Phase 1-2 summary in spawn prompt
+
+Create review tasks:
+```
+Task 10: "PO-A 비즈니스 리뷰" — assign to PO-A (blockedBy: [9])
+Task 11: "PO-B 사용자 리뷰" — assign to PO-B (blockedBy: [9])
+Task 12: "Designer UX 리뷰" — assign to Designer (blockedBy: [9])
+Task 13: "Developer 기술 리뷰" — assign to Developer (blockedBy: [9])
+Task 14: "Analyst 측정 리뷰" — assign to Analyst (blockedBy: [9])
+Task 15: "Marketer 성장 리뷰" — assign to Marketer (blockedBy: [9])
+Task 16: "Lead Scorecard + Gate 2 평가" — Lead handles (blockedBy: [10,11,12,13,14,15])
+```
 
 ### 6-Perspective Parallel Review
 
-Invoke all 6 agents **in parallel**. Pass the debate consensus, hypothesis, and measurement plan to each reviewer.
+Send review tasks to all 6 agents via SendMessage. Pass debate consensus, hypothesis, and measurement plan as context. Each reviewer provides a 1-10 score and key opinion.
 
-**PO A (Data) Prompt**:
-> Review this feature proposal from a data/business perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result]
-> 1. Business impact (revenue, conversion, retention effect)
-> 2. Data-based risk assessment
-> 3. Score: 1-10 (business value)
-> Do NOT re-analyze what was already covered. Focus on review judgment.
+**Review prompts follow feature-review.md format** — each agent reviews from their perspective and scores 1-10. Add instruction: "Do NOT re-analyze what was already covered. Focus on review judgment."
 
-**PO B (Intuitive) Prompt**:
-> Review this feature proposal from a user/market perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result]
-> 1. User value (problem solving, satisfaction, differentiation)
-> 2. Position in user journey
-> 3. Score: 1-10 (user value)
-> Do NOT re-analyze what was already covered. Focus on review judgment.
+### Scorecard + Gate 2 (Lead — Task 16)
 
-**Designer Prompt**:
-> Review this feature proposal from a UI/UX perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result]
-> 1. Scan the project's DesignSystem directory
-> 2. UI consistency, HIG compliance, accessibility
-> 3. Score: 1-10 (design quality)
+Compile scorecard, then evaluate:
 
-**iOS Developer Prompt**:
-> Review this feature proposal from a technical implementation perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result]
-> 1. Explore codebase for feasibility analysis
-> 2. Technical debt, architecture impact, performance/stability risks
-> 3. Score: 1-10 (technical quality/feasibility)
-
-**Data Analyst Prompt**:
-> Review this feature proposal from a measurement/analysis perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result] | Measurement plan: [Phase 2 Step 3 result]
-> 1. Measurability assessment
-> 2. Score: 1-10 (measurability)
-> Build on the measurement plan already created. Do NOT redesign from scratch.
-
-**Marketer Prompt**:
-> Review this feature proposal from a marketing/growth perspective.
-> Context — Debate consensus: [Phase 1 result] | Hypothesis: [Phase 2 result]
-> 1. Marketing material value, viral potential, ASO impact
-> 2. Score: 1-10 (marketing value)
-
-### Scorecard Summary
-
-```markdown
-## Feature Review Scorecard: [Feature Name]
-
-| Perspective | Score | Key Opinion | Main Risk |
-|-------------|:-----:|------------|----------|
-| PO A (Business) | /10 | | |
-| PO B (User) | /10 | | |
-| Designer (UX) | /10 | | |
-| Developer (Tech) | /10 | | |
-| Analyst (Measurement) | /10 | | |
-| Marketer (Growth) | /10 | | |
-| **Average** | **/10** | | |
-```
-
-### Go/No-Go Decision
-
-**Decision Criteria**:
-- **4+ of 6 score 7 or above** -> **Go**
-- Developer scores **4 or below** (critical technical issue) -> **Conditional Hold**
-- PO A scores **4 or below** (unclear metric impact) -> **Validate hypothesis first**
-- Average **5 or below** -> **No-Go** (re-evaluate needed)
+**Decision Criteria:**
+- 4+ of 6 score 7 or above -> **Go**
+- Developer scores 4 or below -> **Conditional Hold**
+- PO A scores 4 or below -> **Validate hypothesis first**
+- Average 5 or below -> **No-Go**
 
 ### GATE 2: Go/No-Go Check
 
-**If No-Go** (average ≤ 5):
-1. Save everything so far to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md`
+**If No-Go** (average <= 5):
+1. Save everything to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md`
 2. Output: `## Pipeline Complete — Stopped at Gate 2: No-Go`
-3. **STOP HERE.**
+3. Run Cleanup. **STOP HERE.**
 
-**If Conditional Hold** (Developer scores ≤ 4):
-1. Save everything with conditions to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md`
-2. Output: `## Pipeline Complete — Stopped at Gate 2: Conditional Hold`
-3. Include the conditions that must be met before re-evaluation
-4. **STOP HERE.**
+**If Conditional Hold** (Developer <= 4):
+1. Save with conditions. Output: `## Pipeline Complete — Stopped at Gate 2: Conditional Hold`
+2. Include conditions for re-evaluation. Run Cleanup. **STOP HERE.**
 
-**If Validate first** (PO A scores ≤ 4):
-1. Save everything with hypothesis gaps to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md`
-2. Output: `## Pipeline Complete — Stopped at Gate 2: Validate Hypothesis First`
-3. Include recommended validation steps
-4. **STOP HERE.**
+**If Validate first** (PO A <= 4):
+1. Save with hypothesis gaps. Output: `## Pipeline Complete — Stopped at Gate 2: Validate Hypothesis First`
+2. Include recommended validation steps. Run Cleanup. **STOP HERE.**
 
-**If Go**: Continue to Phase 4.
+**If Go:** Continue to Phase 4.
 
 ---
 
 ## Phase 4: Design & Implementation Planning
 
-Designer, iOS Developer, and Data Analyst work in parallel using Phase 1-3 context.
+Create Phase 4 tasks:
+```
+Task 17: "Designer UI/UX 설계" — assign to Designer (blockedBy: [16])
+Task 18: "Developer 구현 계획" — assign to Developer (blockedBy: [16])
+Task 19: "Analyst 이벤트 배치 설계" — assign to Analyst (blockedBy: [16])
+```
 
 ### Parallel Work
 
-**Designer Prompt**:
+**To Designer (SendMessage):**
 > Design the UI/UX for: "$ARGUMENTS"
-> Context — Review result: [Phase 3 result] | Hypothesis: [Phase 2 result]
-> 1. Scan the project's DesignSystem directory for existing tokens/components
-> 2. Check Assets.xcassets for Color Sets
-> 3. Screen design: ASCII wireframe, design tokens, existing/new components, state-based UI, interaction/animation
-> 4. Accessibility check (VoiceOver, Dynamic Type, color contrast)
-> 5. Dark mode considerations + HIG compliance
-> 6. SwiftUI code snippets (layout structure)
+> Context — Review result: [Phase 3 summary] | Hypothesis: [Phase 2 summary]
+> 1. Scan DesignSystem directory for tokens/components
+> 2. Screen design: wireframe, tokens, components, state-based UI, interaction
+> 3. Accessibility + dark mode + HIG compliance
+> 4. SwiftUI code snippets
+> Mark Task 17 as completed when done.
 
-**iOS Developer Prompt**:
+**To Developer (SendMessage):**
 > Create an implementation plan for: "$ARGUMENTS"
-> Context — Review result: [Phase 3 result] | Hypothesis: [Phase 2 result]
-> 1. Search existing codebase for reusable components
-> 2. Propose integration approach with existing architecture
+> Context — Review result: [Phase 3 summary] | Hypothesis: [Phase 2 summary]
+> 1. Search codebase for reusable components
+> 2. Propose integration with existing architecture
 > 3. Identify affected files (modified + new)
-> 4. Suggest optimal implementation using SwiftUI/Swift Concurrency
-> 5. Estimate effort (hours/days)
+> 4. Estimate effort
+> Mark Task 18 as completed when done.
 
-**Data Analyst Prompt**:
+**To Analyst (SendMessage):**
 > Design analytics event placement for: "$ARGUMENTS"
-> Context — Measurement plan: [Phase 2 Step 3 result] | Review result: [Phase 3 result]
-> 1. Finalize event map based on the measurement plan from Phase 2
-> 2. Specify code placement (where to place Logger.log() calls)
-> 3. Check for overlap with existing events
-> 4. Map events to dashboard metrics
+> Context — Measurement plan: [Phase 2 Step 3 result] | Review: [Phase 3 summary]
+> 1. Finalize event map from Phase 2 measurement plan
+> 2. Specify code placement (Logger.log() locations)
+> 3. Map events to dashboard metrics
+> Mark Task 19 as completed when done.
 
 ---
 
 ## Phase 5: Post-Launch Monitoring Plan
 
-PO A and Data Analyst define the post-launch monitoring strategy.
+After Tasks 17-19 complete, create monitoring tasks:
+```
+Task 20: "PO-A 모니터링 기준 정의" — assign to PO-A (blockedBy: [17,18,19])
+Task 21: "Analyst 대시보드 설계" — assign to Analyst (blockedBy: [17,18,19])
+Task 22: "Lead 최종 문서 컴파일" — Lead handles (blockedBy: [20,21])
+```
 
-### Parallel Work
-
-**PO A Prompt**:
-> Based on the hypothesis and measurement plan from earlier phases, define:
-> Context — Hypothesis: [Phase 2 result] | Measurement plan: [Phase 2 Step 3 result]
+**To PO-A (SendMessage):**
+> Define post-launch monitoring criteria:
+> Context — Hypothesis: [Phase 2] | Measurement plan: [Phase 2 Step 3]
 > 1. Success/failure thresholds for each KPI
-> 2. Timeline checkpoints (D1, D7, D14, D30) with specific checks per checkpoint
-> 3. Rollback/pivot criteria (when to revert or change direction)
+> 2. Timeline checkpoints (D1, D7, D14, D30) with specific checks
+> 3. Rollback/pivot criteria
 > 4. Business impact projection if successful
+> Mark Task 20 as completed when done.
 
-**Data Analyst Prompt**:
-> Based on the event map and measurement plan, define:
-> Context — Measurement plan: [Phase 2 Step 3 result] | Event map: [Phase 4 Analyst result]
-> 1. Dashboard configuration (which charts, which metrics)
-> 2. Alert rules (notify when metric drops below X)
-> 3. Specific Amplitude/RevenueCat queries to run at each checkpoint
-> 4. Comparison methodology (before/after, cohort comparison, A/B results)
+**To Analyst (SendMessage):**
+> Define monitoring dashboard and alerting:
+> Context — Measurement plan: [Phase 2 Step 3] | Event map: [Phase 4 Analyst result]
+> 1. Dashboard configuration (charts, metrics)
+> 2. Alert rules (thresholds)
+> 3. Specific Amplitude/RevenueCat queries per checkpoint
+> 4. Comparison methodology
+> Mark Task 21 as completed when done.
 
 ---
 
-## Final Output: Pipeline Document
+## Final Output: Pipeline Document (Lead — Task 22)
 
 Compile ALL phases into a single document:
 
@@ -304,7 +279,7 @@ Date: YYYY-MM-DD
 [Consensus summary + key arguments + direction judgment]
 
 ## 2. Hypothesis
-[Integrated hypothesis statement + ICE score + success metrics]
+[Integrated hypothesis + ICE score + success metrics]
 
 ### Measurement Plan
 [Events, A/B test design, sample size, duration]
@@ -342,15 +317,15 @@ Date: YYYY-MM-DD
 | Timing | What to Check | How to Check | Success Criteria |
 |--------|--------------|-------------|-----------------|
 | D1 | Event firing, crash rate | Amplitude live view | Events > 0, crash rate < baseline |
-| D7 | Activation rate, usage freq | Amplitude funnel chart | Activation ≥ X% |
-| D14 | Retention impact | Cohort analysis | D14 retention ≥ baseline |
+| D7 | Activation rate, usage freq | Amplitude funnel chart | Activation >= X% |
+| D14 | Retention impact | Cohort analysis | D14 retention >= baseline |
 | D30 | Revenue impact, full hypothesis | RevenueCat + Amplitude | Primary KPI meets target |
 
 ### Decision Criteria
-- **Success**: [Primary KPI target met] → Scale / iterate
-- **Partial**: [Secondary met, primary not] → Optimize
-- **Failure**: [Below guard rail] → Rollback
-- **Inconclusive**: [Insufficient data] → Extend experiment
+- **Success**: [Primary KPI target met] -> Scale / iterate
+- **Partial**: [Secondary met, primary not] -> Optimize
+- **Failure**: [Below guard rail] -> Rollback
+- **Inconclusive**: [Insufficient data] -> Extend experiment
 
 ### Recommended Actions
 - D7: Run `/growth-audit subscription conversion` for early signal
@@ -364,3 +339,11 @@ Date: YYYY-MM-DD
 Save the complete pipeline document to `docs/decisions/YYYY-MM-DD-pipeline-{feature-name}.md`.
 
 Verify `docs/decisions/` directory exists before saving; create if needed.
+
+---
+
+## Cleanup
+
+1. Send `shutdown_request` to all teammates (PO-A, PO-B, Analyst, Designer, Developer, Marketer) via SendMessage
+2. Wait for `shutdown_response` confirmations
+3. Call `TeamDelete`
