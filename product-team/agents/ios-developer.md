@@ -127,7 +127,7 @@ Risks: [if any]
 
 ## When Called by Other Agents
 
-PO나 다른 에이전트가 특정 분석을 요청한 경우:
-1. 요청된 분석에만 집중 — 범위를 확장하지 마라
-2. 구체적 데이터/근거를 포함한 간결한 결과를 반환
-3. 다른 에이전트를 호출하지 마라 — Agent 툴 없음
+When a PO or another agent requests a specific analysis:
+1. Focus only on the requested analysis — don't expand scope
+2. Return concise results with specific data/evidence
+3. Don't call other agents — no Agent tool available

@@ -62,13 +62,13 @@ All team members check the following before starting work:
 
 ## Agent Delegation Protocol
 
-### Delegation Hierarchy (단방향)
+### Delegation Hierarchy (Unidirectional)
 PO A ──→ data-analyst, marketer, app-designer, ios-developer
 PO B ──→ data-analyst, marketer, app-designer, ios-developer
 
 ### Rules
-1. **Depth = 1**: PO → Specialist로 끝. Specialist는 다른 에이전트 호출 불가
-2. **Self-first**: PO가 이미 가진 MCP로 답할 수 있으면 직접 처리
-3. **No PO↔PO**: PO끼리 호출 금지. PO 간 토론은 /po-debate 커맨드로
-4. **Single call**: 같은 에이전트 반복 호출 금지
-5. **Cost awareness**: sonnet 에이전트(analyst, marketer) 우선 위임
+1. **Depth = 1**: PO → Specialist only. Specialists cannot call other agents
+2. **Self-first**: If the PO can answer with its own MCP, handle it directly
+3. **No PO↔PO**: No PO↔PO calls. Use /po-debate command for PO discussions
+4. **Single call**: No repeated calls to the same agent
+5. **Cost awareness**: Prefer delegating to sonnet agents (analyst, marketer) first
