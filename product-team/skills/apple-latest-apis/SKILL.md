@@ -6,6 +6,7 @@ description: >
   AlarmKit, StoreKit updates, and other new SwiftUI features.
   Useful for "use Liquid Glass", "Foundation Models on-device AI", "Swift 6.2 concurrency changes",
   "SwiftData inheritance", "AlarmKit timers", "StoreKit subscription updates".
+user-invocable: false
 ---
 
 # Apple Latest API Reference

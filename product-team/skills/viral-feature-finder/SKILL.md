@@ -5,6 +5,7 @@ description: >
   calculating K-factor, or discovering Build in Public content material.
   Useful for "design viral feature", "calculate K-factor", "sharing mechanism",
   "Build in Public ideas", "viral loop design", "referral program".
+user-invocable: false
 ---
 
 # Viral Feature Finder

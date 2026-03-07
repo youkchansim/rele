@@ -29,6 +29,9 @@ tools:
 skills:
   - event-taxonomy
   - user-data-analysis
+  - statistical-analysis
+  - metrics-tracking
+  - data-visualization
   - sprint-planning
   - decision-log
 color: cyan

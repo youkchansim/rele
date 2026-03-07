@@ -1,7 +1,7 @@
 {
   "name": "product-team",
-  "version": "1.4.0",
-  "description": "Virtual product team for solo iOS developers. Six sub-agents (Data PO, Intuitive PO, Designer, iOS Developer, Data Analyst, Marketer) collaborate on sprint planning, PO debates, feature reviews, and growth audits.",
+  "version": "1.5.0",
+  "description": "Virtual product team for solo iOS developers. Six sub-agents (Data PO, Intuitive PO, Designer, iOS Developer, Data Analyst, Marketer) collaborate on sprint planning, PO debates, feature reviews, growth audits, product discovery, and strategy development. PO agents equipped with deep frameworks: prioritization (ICE/RICE/Kano/MoSCoW/Weighted), discovery (OST/Assumption Mapping/Mom Test), strategy (Strategy Canvas/Lean Canvas/Value Proposition), market analysis (SWOT/Porter's/TAM-SAM-SOM), and PRD creation.",
   "author": {
     "name": "youkchansim"
   }

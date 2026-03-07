@@ -5,6 +5,7 @@ description: >
   defining success metrics, and quantifying business impact for feature proposals.
   Useful for "plan a feature", "evaluate this idea", "prioritize features",
   "ICE score this proposal", "structure a hypothesis", "compare feature options".
+user-invocable: false
 ---
 
 # Hypothesis Framework

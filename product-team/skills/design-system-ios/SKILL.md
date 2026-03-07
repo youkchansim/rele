@@ -5,6 +5,7 @@ description: >
   design tokens/components, or checking HIG compliance and accessibility.
   Useful for "check design tokens", "audit HIG compliance", "design system audit",
   "review component consistency", "accessibility check".
+user-invocable: false
 ---
 
 # iOS Design System Management

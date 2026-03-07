@@ -79,7 +79,6 @@ Include the following at the end of the summary:
 
 > **Next Step Options:**
 > - Deeper discussion → `/po-debate "$ARGUMENTS"`
-> - Formalize hypothesis → `/hypothesis-test "$ARGUMENTS"`
 > - Full pipeline → `/product-pipeline "$ARGUMENTS"`
 
 ---

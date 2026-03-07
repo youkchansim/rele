@@ -5,6 +5,7 @@ description: >
   events, applying the 3-Question filter, or auditing existing event structure.
   Useful for "design event taxonomy", "name this event", "audit existing events",
   "3-Question filter", "event naming conventions", "should we track this".
+user-invocable: false
 ---
 
 # Event Taxonomy Design

@@ -5,6 +5,7 @@ description: >
   evaluating market positioning, or identifying differentiation opportunities.
   Useful for "analyze competitors", "compare features", "market positioning",
   "what are similar apps doing", "find differentiation opportunities".
+user-invocable: false
 ---
 
 # Competitor Analysis Framework

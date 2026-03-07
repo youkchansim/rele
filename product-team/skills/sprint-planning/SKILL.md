@@ -5,6 +5,7 @@ description: >
   setting sprint goals, or scheduling tasks for a development cycle.
   Useful for "plan next sprint", "organize backlog", "sprint goal setting",
   "weekly planning", "task scheduling", "estimate sprint capacity".
+user-invocable: false
 ---
 
 # Sprint Planning

@@ -5,6 +5,7 @@ description: >
   rates, retention cohorts, revenue metrics, or LTV calculations.
   Useful for "analyze funnel", "check retention", "revenue analysis",
   "user segment comparison", "LTV calculation", "behavior analysis".
+user-invocable: false
 ---
 
 # User Data Analysis Framework

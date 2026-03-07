@@ -328,8 +328,8 @@ Date: YYYY-MM-DD
 - **Inconclusive**: [Insufficient data] -> Extend experiment
 
 ### Recommended Actions
-- D7: Run `/growth-audit subscription conversion` for early signal
-- D30: Run `/growth-audit` for full AARRR diagnosis
+- D7: Diagnose subscription conversion metrics for early signal
+- D30: Run full AARRR funnel diagnosis
 ```
 
 ---

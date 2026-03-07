@@ -5,6 +5,7 @@ description: >
   debate outcomes, or tracking Go/No-Go results in ADR format.
   Useful for "record this decision", "log debate result", "document Go/No-Go",
   "save decision", "create decision record", "what did we decide about".
+user-invocable: false
 ---
 
 # Decision Log
@@ -64,7 +65,7 @@ Record decisions in these situations:
 2. **Feature Go/No-Go** — After `feature-review` command completes
 3. **Technical Choices** — Architecture, library, or API selection
 4. **Strategy Changes** — North Star, target users, pricing changes
-5. **Sprint Goals** — After `team-sprint` command completes
+5. **Sprint Goals** — After sprint planning completes
 
 These commands automatically produce decision-worthy outputs. Capture the key decisions from their results using this format.
 
