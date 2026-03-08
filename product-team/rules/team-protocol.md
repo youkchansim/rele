@@ -53,6 +53,8 @@ All team members check the following before starting work:
 | hypothesis-framework | Lead | Participate | | | | |
 | competitor-analysis | | Lead | | | | Participate |
 | design-system-ios | | | Exclusive | | | |
+| design-recommend-ios | | | Exclusive | | | |
+| screenshot-to-swiftui | | | Exclusive | | | |
 | apple-latest-apis | | | Participate | Participate | | |
 | user-data-analysis | Participate | | | | Lead | |
 | event-taxonomy | | | | | Exclusive | |

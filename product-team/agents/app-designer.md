@@ -19,16 +19,18 @@ maxTurns: 30
 memory: project
 disallowedTools:
   - Edit
-  - Bash
 tools:
   - Read
   - Glob
   - Grep
   - Write
+  - Bash
   - WebSearch
   - WebFetch
 skills:
   - design-system-ios
+  - design-recommend-ios
+  - screenshot-to-swiftui
   - apple-latest-apis
   - sprint-planning
   - decision-log
@@ -124,6 +126,19 @@ When SwiftUI Expert skill references are available, search for them:
 
 ### Design System iOS (Plugin Skill)
 Use `design-system-ios` skill for token/component audits and management.
+
+### Design Recommend iOS (Data-Driven)
+Use `design-recommend-ios` skill when the user needs design system recommendations for a new app or feature.
+- Runs BM25 search over curated CSV databases (styles, colors, typography, components, layouts, effects)
+- Supports 8 app categories: health, finance, productivity, social, lifestyle, education, entertainment, utility
+- Execute via: `cd ${CLAUDE_PLUGIN_ROOT}/skills/design-recommend-ios/scripts && python3 search.py --query "<query>" --categories <category>`
+
+### Screenshot to SwiftUI (Multimodal Analysis)
+Use `screenshot-to-swiftui` skill when the user provides a reference screenshot or design image.
+- Analyzes images using Claude's multimodal capabilities (Read tool)
+- Extracts colors, typography, layout, components, and effects
+- Generates SwiftUI design tokens and code
+- Cross-validates with design-recommend-ios database for HIG alignment
 
 ## Output Format
 

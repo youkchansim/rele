@@ -110,6 +110,59 @@ struct FeatureCard: View {
 ```
 ```
 
+### Phase 5: Token Persistence & Overrides
+
+When the project's design system is finalized, persist tokens for reuse:
+
+#### 5.1 Save Override CSVs
+Store project-specific token overrides at:
+```
+docs/design-system/overrides/
+├── styles.csv       # Project style overrides
+├── colors.csv       # Custom color palette
+├── typography.csv   # Typography customizations
+├── components.csv   # Project-specific components
+├── layouts.csv      # Custom layout patterns
+└── effects.csv      # Custom visual effects
+```
+
+These CSVs follow the same schema as `design-recommend-ios/data/*.csv`.
+The BM25 search engine merges overrides with base data automatically.
+
+#### 5.2 Generate Design Tokens Summary
+Create a human-readable summary at `docs/design-system/design-tokens.md`:
+
+```markdown
+# Design Tokens — [Project Name]
+
+## Colors
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| `Color.primaryApp` | #xxx | #xxx | Main brand color |
+
+## Typography
+| Style | Font | Weight | Size |
+|-------|------|--------|------|
+
+## Spacing
+| Token | Value | Usage |
+|-------|-------|-------|
+
+## Components
+| Name | Location | Props |
+|------|----------|-------|
+
+Generated: YYYY-MM-DD
+Source: design-system-ios Phase 5
+```
+
+#### 5.3 Workflow
+1. Run Phase 1-4 audit to collect current tokens
+2. Compare with existing overrides (if any) — merge changes
+3. Write updated override CSVs
+4. Regenerate `design-tokens.md` summary
+5. Notify that `design-recommend-ios` search will now use project overrides
+
 ## SwiftUI Expert References
 
 When SwiftUI Expert skill references are available, consult them for:
