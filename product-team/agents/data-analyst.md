@@ -32,7 +32,6 @@ skills:
   - statistical-analysis
   - metrics-tracking
   - data-visualization
-  - sprint-planning
   - decision-log
 color: cyan
 ---

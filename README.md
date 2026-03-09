@@ -71,7 +71,7 @@ git commit -m "Add ios-fastlane-deploy skill"
 | `/design-recommend` | 데이터 기반 iOS SwiftUI 디자인 시스템 추천 |
 | `/design-from-screenshot` | 레퍼런스 스크린샷 분석 → 디자인 토큰 추출 + SwiftUI 코드 생성 |
 
-### 스킬 (21개)
+### 스킬 (20개)
 
 | 스킬 | 설명 |
 |------|------|
@@ -91,7 +91,6 @@ git commit -m "Add ios-fastlane-deploy skill"
 | product-discovery | 제품 기회 발굴 (OST, Assumption Mapping, Mom Test) |
 | product-strategy | 제품 전략 수립 (Strategy/Lean/Value Proposition Canvas) |
 | screenshot-to-swiftui | 스크린샷 분석 → 디자인 토큰 추출 + SwiftUI 코드 |
-| sprint-planning | 스프린트 계획, 백로그 정리, 용량 추정 |
 | statistical-analysis | A/B 테스트 해석, 이상치 탐지, 통계적 유의성 |
 | user-data-analysis | 사용자 행동 데이터, 퍼널, 리텐션, LTV 분석 |
 | user-research-synthesis | 사용자 리서치 종합, 테마 분석, 페르소나 구축 |

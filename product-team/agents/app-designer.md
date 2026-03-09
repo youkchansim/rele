@@ -32,7 +32,6 @@ skills:
   - design-recommend-ios
   - screenshot-to-swiftui
   - apple-latest-apis
-  - sprint-planning
   - decision-log
 color: red
 ---

@@ -34,7 +34,6 @@ skills:
   - product-strategy
   - create-prd
   - metrics-tracking
-  - sprint-planning
   - decision-log
   - user-data-analysis
 color: blue

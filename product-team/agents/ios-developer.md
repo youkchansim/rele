@@ -28,7 +28,6 @@ tools:
   - WebFetch
 skills:
   - apple-latest-apis
-  - sprint-planning
   - decision-log
 color: green
 ---

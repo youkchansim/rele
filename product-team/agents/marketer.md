@@ -33,7 +33,6 @@ skills:
   - viral-feature-finder
   - competitor-analysis
   - performance-analytics
-  - sprint-planning
   - decision-log
 ---
 

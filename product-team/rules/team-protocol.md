@@ -59,7 +59,6 @@ All team members check the following before starting work:
 | user-data-analysis | Participate | | | | Lead | |
 | event-taxonomy | | | | | Exclusive | |
 | viral-feature-finder | | | | | | Exclusive |
-| sprint-planning | O | O | O | O | O | O |
 | decision-log | O | O | O | O | O | O |
 
 ## Agent Team Communication Protocol

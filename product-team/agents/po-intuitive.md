@@ -35,7 +35,6 @@ skills:
   - market-analysis
   - competitor-analysis
   - user-research-synthesis
-  - sprint-planning
   - decision-log
 color: magenta
 ---
