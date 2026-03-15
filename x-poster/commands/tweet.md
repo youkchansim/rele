@@ -6,7 +6,7 @@ arguments:
     description: "콘텐츠 유형 (bip, showcase, insight, tech, all)"
     required: false
   - name: days
-    description: "분석할 커밋 기간 (기본: 7일)"
+    description: "분석할 커밋 기간 (기본: 2일)"
     required: false
 ---
 
