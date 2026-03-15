@@ -19,6 +19,11 @@
       "name": "product-team",
       "description": "Virtual product team (PO A/B, Designer, iOS Developer, Data Analyst, Marketer) sub-agent collaboration plugin",
       "source": "./product-team"
+    },
+    {
+      "name": "x-poster",
+      "description": "Scheduler 앱 X 마케팅 자동화 — 커밋 기반 콘텐츠 생성 및 게시",
+      "source": "./x-poster"
     }
   ]
 }
