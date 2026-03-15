@@ -1,15 +1,15 @@
 ---
 name: tweet
-description: 커밋 기반 X 트윗 자동 생성 및 게시
+description: Auto-generate and post X tweets from commit history
 arguments:
   - name: type
-    description: "콘텐츠 유형 (bip, showcase, insight, tech, all)"
+    description: "Content type (bip, showcase, insight, tech, all)"
     required: false
   - name: days
-    description: "분석할 커밋 기간 (기본: 2일)"
+    description: "Commit analysis period (default: 2 days)"
     required: false
 ---
 
-커밋 히스토리를 분석하여 X 트윗을 자동 생성하고 게시하는 스킬을 실행합니다.
+Analyze commit history to auto-generate and post X tweets.
 
 $ARGUMENTS

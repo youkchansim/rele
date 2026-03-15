@@ -1,10 +1,10 @@
-# 카테고리별 트윗 예시
+# Category-Specific Tweet Examples
 
-실제 커밋 데이터 기반으로 생성된 트윗 예시. SKILL.md에서 참조용으로 사용.
+Real tweet examples generated from commit data. Used as reference by SKILL.md.
 
 ---
 
-## Build in Public — 주간 로그
+## Build in Public — Dev Log
 
 ```
 Week 12 building Scheduler in public:
@@ -19,7 +19,7 @@ Week 12 building Scheduler in public:
 What's your biggest win this week?
 ```
 
-## 제품 쇼케이스 — 새 기능
+## Product Showcase — New Feature
 
 ```
 Just shipped: voice input for Scheduler ✨
@@ -33,7 +33,7 @@ No typing. No tapping through forms. Just talk.
 What feature saves you the most time in your scheduling app?
 ```
 
-## ADHD/생산성 인사이트
+## ADHD/Productivity Insight
 
 ```
 ADHD scheduling truth:
@@ -49,7 +49,7 @@ You just need the data to see it.
 When do you do your best work?
 ```
 
-## 기술 결정 공유
+## Tech Decision Sharing
 
 ```
 Why I moved from a single AI provider to a pluggable architecture:
@@ -63,7 +63,7 @@ Result: 40% fewer API calls, happier users.
 How do you handle AI provider switching in your apps?
 ```
 
-## 버그 수정 — 고난 스토리
+## Bug Fix — Struggle Story
 
 ```
 Spent 2 hours debugging a recurring event deletion bug.
@@ -77,7 +77,7 @@ Literally 3 lines of code. 2 hours of confusion.
 What's your "3 lines, 2 hours" story?
 ```
 
-## UI/UX — 비포/애프터
+## UI/UX — Before/After
 
 ```
 Small design change, huge impact:
@@ -91,7 +91,7 @@ Sometimes the best feature is removing a tap.
 Monthly or weekly — which do you default to?
 ```
 
-## Apple Intelligence 인사이트
+## Apple Intelligence Insight
 
 ```
 On-device AI tip for iOS devs:
@@ -110,7 +110,7 @@ Are you building with on-device AI yet?
 
 ---
 
-## 스레드 예시 (4개 트윗)
+## Thread Example (4 tweets)
 
 ```
 🧵 I'm building a scheduling app for ADHD brains. Here's why:

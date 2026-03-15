@@ -1,185 +1,193 @@
 ---
 name: tweet
 description: >
-  Scheduler 앱의 커밋 히스토리를 분석하여 X(Twitter) 트윗을 자동 생성하고 게시한다.
-  커밋 패턴에 따라 Build in Public, 제품 쇼케이스, ADHD 인사이트, 기술 결정 공유 등
-  다양한 카테고리의 트윗을 생성하며, X API를 통해 직접 게시할 수 있다.
-  /tweet 커맨드로 실행된다.
+  Analyze Scheduler app commit history to auto-generate and post X (Twitter) tweets.
+  Categorizes commits into Build in Public, product showcase, ADHD insights, or tech decisions,
+  generates tweets accordingly, and can post directly via X API.
+  Invoked via /tweet command.
 ---
 
-# X 자동 포스팅 스킬
+# X Auto-Posting Skill
 
-Scheduler 앱의 커밋 히스토리를 분석하여 X 트윗을 자동 생성하고, 사용자 확인 후 게시한다.
+Analyze Scheduler app commit history to auto-generate X tweets, confirm with user, and post.
 
-## 인자 파싱
+## Argument Parsing
 
-`$ARGUMENTS`에서 다음을 추출한다:
-- **type**: 콘텐츠 유형 (`bip`, `showcase`, `insight`, `tech`, `all`) — 없으면 자동 추천
-- **days**: 분석할 커밋 기간 (기본: 2일)
+Extract from `$ARGUMENTS`:
+- **type**: Content type (`bip`, `showcase`, `insight`, `tech`, `all`) — auto-recommend if omitted
+- **days**: Commit analysis period (default: 2 days)
 
-## 워크플로우
+## Content Guidelines
 
-### Step 1: 커밋 분석
+**IMPORTANT: User-centric product content only.**
+- Focus on changes that directly impact end users (new features, UX improvements)
+- Skip internal implementation details (refactoring, code cleanup, bug fixes with no visible impact)
+- Write for a global audience — avoid US-specific references or cultural idioms
+- Write in English
+
+## Workflow
+
+### Step 1: Commit Analysis
 
 ```bash
-# 최근 N일간 커밋 히스토리 가져오기
-git log --oneline --since="{days}일 전" --no-merges
+# Fetch recent commit history
+git log --oneline --since="{days} days ago" --no-merges
 ```
 
-커밋 메시지를 분석하여:
-1. 각 커밋을 카테고리로 분류 (content-strategy.md의 매핑 규칙 참조)
-   - feat/구현/추가 → showcase
-   - fix/수정/해결 → bip (고난 스토리)
-   - 개선/최적화/리팩토링 → tech
-   - UI/디자인/뷰/View → showcase (비포/애프터)
-   - AI/파싱/프롬프트 → insight (Apple Intelligence)
-   - HealthKit/건강/에너지 → insight (ADHD)
-   - 다수 커밋 → bip (주간 로그)
-2. 변경 규모 파악 (커밋 수, 파일 변경 수)
-3. 주요 변경 사항을 사람이 이해할 수 있는 언어로 요약
+Analyze commit messages to:
+1. Classify each commit by category (see content-strategy.md mapping rules)
+   - feat/implement/add → showcase
+   - fix/resolve → bip (struggle story)
+   - improve/optimize/refactor → tech
+   - UI/design/View → showcase (before/after)
+   - AI/parsing/prompt → insight (Apple Intelligence)
+   - HealthKit/health/energy → insight (ADHD)
+   - Multiple commits → bip (dev log)
+2. Assess change scope (commit count, files changed)
+3. **Filter: only keep changes visible to end users**
+4. Summarize key changes in human-readable language
 
-### Step 2: 카테고리 선택
+### Step 2: Category Selection
 
-**type 인자가 있는 경우:** 해당 카테고리로 바로 진행
+**If type argument provided:** Proceed with that category directly.
 
-**type 인자가 없는 경우:** AskUserQuestion으로 카테고리를 제안한다.
+**If type argument omitted:** Use AskUserQuestion to suggest a category.
 
-커밋 분석 결과를 바탕으로 가장 적합한 카테고리를 추천하되, 모든 옵션을 보여준다:
-
-```
-커밋 분석 결과:
-- 새 기능 2건: 음성 입력, AI 프로바이더 추상화
-- 버그 수정 1건: 반복 일정 삭제
-- UI 개선 1건: 캘린더 기본 뷰 변경
-
-추천 카테고리: showcase (음성 입력 기능이 임팩트 있음)
-
-1. bip — Build in Public 주간 로그
-2. showcase — 제품 쇼케이스 (음성 입력)
-3. insight — ADHD/생산성 인사이트
-4. tech — 기술 결정 공유
-5. all — 여러 카테고리 배치 생성
-```
-
-### Step 3: 트윗 생성
-
-선택된 카테고리와 커밋 데이터를 기반으로 트윗을 작성한다.
-
-**반드시 지켜야 할 규칙:**
-
-1. **영어로 작성** — 미국 시장 타겟
-2. **X 알고리즘 최적화** (content-strategy.md 참조)
-   - 단일 트윗: 71-280자
-   - 리플 유도 질문으로 마무리
-   - 해시태그 1-2개만
-   - 외부 링크 최소화
-3. **바이럴 훅 적용** (viral-hooks.md에서 적합한 훅 선택)
-4. **구체적 숫자와 사실 포함** — 커밋 데이터에서 추출
-5. **직접적 판매 어조 금지** — 관심 유도만
-
-**생성 형식:**
+Show commit analysis results and recommend the most suitable category based on user-facing impact:
 
 ```
-## 트윗 미리보기
+Commit analysis:
+- New features: 2 (voice input, quick action bar)
+- UX improvements: 1 (calendar default view change)
+
+Recommended: showcase (voice input has highest user impact)
+
+1. bip — Build in Public dev log
+2. showcase — Product showcase
+3. insight — ADHD/productivity insight
+4. tech — Tech decision sharing
+5. all — Batch generate multiple categories
+```
+
+### Step 3: Tweet Generation
+
+Write the tweet based on selected category and commit data.
+
+**Rules:**
+
+1. **Write in English** — global audience
+2. **X algorithm optimization** (see content-strategy.md)
+   - Single tweet: 71-280 characters
+   - End with a reply-inducing question
+   - 1-2 hashtags max
+   - Minimize external links
+3. **Apply viral hooks** (select from viral-hooks.md)
+4. **Include specific numbers and facts** — extracted from commit data
+5. **No hard-sell tone** — attract interest only
+6. **User perspective only** — frame everything as user benefit, not developer achievement
+
+**Output format:**
+
+```
+## Tweet Preview
 
 ---
-[트윗 내용 — 영어]
+[Tweet content — English]
 ---
 
-📊 분석:
-- 글자 수: {N}자
-- 훅 유형: {사용된 훅 템플릿}
-- 카테고리: {카테고리}
-- 참여 유도 요소: {리플 유도 질문 등}
-- 최적 포스팅 시간: 수요일 오후 11시 (KST)
+Analytics:
+- Characters: {N}
+- Hook type: {hook template used}
+- Category: {category}
+- Engagement element: {reply-inducing question etc.}
+- Optimal posting time: Wed 11 PM KST (matches US East morning, EU afternoon)
 ```
 
-**all 타입인 경우:** 각 카테고리별로 1개씩 여러 트윗을 생성하고, 번호를 매겨 선택할 수 있게 한다.
+**For `all` type:** Generate one tweet per category, numbered for selection.
 
-### Step 4: 사용자 확인
+### Step 4: User Confirmation
 
-AskUserQuestion으로 확인한다:
-
-```
-위 트윗을 어떻게 할까요?
-
-1. 게시 — X에 바로 게시
-2. 수정 — 수정 사항을 알려주세요
-3. 재생성 — 다른 스타일로 다시 생성
-4. 취소
-```
-
-- **수정 요청 시:** 사용자 피드백을 반영하여 수정 후 다시 확인
-- **재생성 요청 시:** 다른 훅/구조로 새로 생성
-
-### Step 4.5: 미디어 첨부 확인
-
-사용자가 "게시"를 선택하면, AskUserQuestion으로 미디어 첨부 여부를 확인한다:
+Use AskUserQuestion:
 
 ```
-미디어를 첨부하시겠습니까?
+What would you like to do with this tweet?
 
-1. 텍스트만 게시
-2. 이미지/영상 첨부 — 파일 경로를 알려주세요 (최대 4개, 쉼표로 구분)
+1. Post — Post to X now
+2. Edit — Tell me what to change
+3. Regenerate — Try a different style
+4. Cancel
 ```
 
-- **"텍스트만 게시" 선택 시:** Step 5로 진행 (미디어 없이)
-- **"이미지/영상 첨부" 선택 시:** AskUserQuestion으로 파일 경로를 추가 입력 받는다:
+- **Edit request:** Apply feedback and re-confirm
+- **Regenerate request:** Generate with different hook/structure
+
+### Step 4.5: Media Attachment
+
+When user selects "Post", use AskUserQuestion to check for media:
+
+```
+Attach media?
+
+1. Post text only
+2. Attach image/video — provide file path(s) (max 4, comma-separated)
+```
+
+- **"Text only":** Proceed to Step 5 without media
+- **"Attach":** Use AskUserQuestion for file paths:
   ```
-  첨부할 미디어 파일 경로를 입력해주세요.
-  여러 파일은 쉼표(,)로 구분합니다. (최대 4개)
+  Enter media file path(s), comma-separated (max 4):
 
-  예: /path/to/image.png, /path/to/screenshot.jpg
+  Example: /path/to/image.png, /path/to/screenshot.jpg
   ```
-  입력받은 경로를 `MEDIA_PATH` 변수에 저장하고 Step 5로 진행한다.
+  Store paths in `MEDIA_PATH` and proceed to Step 5.
 
-### Step 5: X API로 게시
+### Step 5: Post via X API
 
-사용자가 "게시"를 선택하면:
+When user selects "Post":
 
-**미디어가 없는 경우:**
+**Without media:**
 ```bash
-bash ~/.claude/plugins/x-poster/scripts/x-post.sh "트윗 내용"
+bash ~/.claude/plugins/x-poster/scripts/x-post.sh "tweet content"
 ```
 
-**미디어가 있는 경우:**
+**With media:**
 ```bash
-bash ~/.claude/plugins/x-poster/scripts/x-post.sh "트윗 내용" "미디어경로1,미디어경로2"
+bash ~/.claude/plugins/x-poster/scripts/x-post.sh "tweet content" "media_path1,media_path2"
 ```
 
-**결과 표시:**
-- 성공: 게시된 트윗 URL 표시
-- 실패: 에러 메시지 표시 + 재시도 여부 확인
+**Result display:**
+- Success: Show posted tweet URL
+- Failure: Show error message + ask retry
 
-**API 미설정 시:**
+**If API not configured:**
 ```
-X API가 설정되지 않았습니다.
+X API is not configured.
 
-설정 방법:
-1. https://developer.x.com/en/portal/dashboard 에서 API 키 발급
-2. ~/.x-poster.env 파일 생성 (예시: ~/.claude/plugins/x-poster/.env.example 참조)
-3. 필요한 환경변수: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+Setup instructions:
+1. Get API keys at https://developer.x.com/en/portal/dashboard
+2. Create ~/.x-poster.env (see ~/.claude/plugins/x-poster/.env.example)
+3. Required vars: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 
-트윗 내용을 클립보드에 복사할까요?
+Copy tweet text to clipboard instead?
 ```
 
-API가 없어도 트윗 텍스트는 생성하여 보여주고, 수동 게시를 위해 클립보드 복사를 제안한다.
+Show generated tweet text regardless and offer clipboard copy for manual posting.
 
-## 스레드 생성 규칙
+## Thread Rules
 
-커밋 내용이 풍부하거나, 카테고리가 `bip` (주간 로그)인 경우 스레드(4-8개 트윗)를 생성할 수 있다.
+For rich commit content or `bip` (dev log) category, generate a thread (4-8 tweets).
 
-**스레드 구조:**
-1. **훅 트윗** — 가장 임팩트 있는 한 줄 + "🧵"
-2. **컨텍스트** — 왜 이것을 만들고 있는지
-3. **주요 내용** — 이번 주/기능의 핵심 (2-4개 트윗)
-4. **마무리** — 질문으로 끝 + CTA
+**Thread structure:**
+1. **Hook tweet** — Most impactful one-liner + "🧵"
+2. **Context** — Why you're building this
+3. **Key content** — Core highlights (2-4 tweets)
+4. **Closing** — End with question + CTA
 
-스레드인 경우 x-post.sh를 순차적으로 호출하되, 각 트윗 사이에 `reply_to` 파라미터를 연결한다.
+For threads, call x-post.sh sequentially with `reply_to` parameter chaining.
 
-## 레퍼런스 파일
+## Reference Files
 
-이 스킬은 다음 레퍼런스 파일을 참조한다:
-- `references/content-strategy.md` — 콘텐츠 전략, 커밋→콘텐츠 매핑 규칙, 알고리즘 최적화
-- `references/viral-hooks.md` — 50가지 바이럴 훅 템플릿
-- `references/tweet-examples.md` — 카테고리별 트윗 예시
+This skill references:
+- `references/content-strategy.md` — Content strategy, commit→content mapping, algorithm optimization
+- `references/viral-hooks.md` — 50 viral hook templates
+- `references/tweet-examples.md` — Category-specific tweet examples
